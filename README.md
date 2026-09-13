@@ -38,10 +38,20 @@ git push -u origin main
 
 แทน `<ชื่อผู้ใช้>` และ `<ชื่อ-repo>` ด้วยของจริง
 
-### ถ้าอยาก deploy ผ่าน GitHub Pages
-1. เพิ่ม `base: "/<ชื่อ-repo>/"` ใน `vite.config.js`
-2. รัน `npm run build`
-3. ใช้ action หรือแพ็กเกจ `gh-pages` เพื่อ push โฟลเดอร์ `dist` ไปที่ branch `gh-pages`
+### Deploy ผ่าน GitHub Pages (ตั้งค่าไว้ให้แล้ว)
+
+โปรเจกต์นี้มี GitHub Actions workflow (`.github/workflows/deploy.yml`) ที่ build
+และ deploy ขึ้น GitHub Pages ให้อัตโนมัติทุกครั้งที่ push เข้า branch `main`
+เหลือแค่เปิดใช้งานครั้งแรก:
+
+1. ไปที่ repo บน GitHub → **Settings → Pages**
+2. หัวข้อ **Build and deployment → Source** เปลี่ยนจาก "Deploy from a branch"
+   เป็น **"GitHub Actions"**
+3. กลับไปที่แท็บ **Actions** แล้วรอ workflow "Deploy to GitHub Pages" รันจนเสร็จ
+   (ถ้าไม่รันเอง กด **Run workflow** ได้)
+4. เว็บจะขึ้นที่ `https://<ชื่อผู้ใช้>.github.io/<ชื่อ-repo>/`
+
+จากนั้นทุกครั้งที่ push โค้ดใหม่ขึ้น `main` เว็บจะ build และ deploy เวอร์ชันใหม่ให้เอง
 
 ## หมายเหตุ
 
