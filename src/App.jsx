@@ -1,0 +1,1066 @@
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Plus, Search, X, ArrowLeft, Trash2, Pencil, BookOpen, Check } from "lucide-react";
+
+/* ---------------------------------------------------------------------- */
+/* Config                                                                  */
+/* ---------------------------------------------------------------------- */
+
+const STORAGE_KEY = "bookshelf:data";
+
+const PALETTE = [
+  { bg: "#DCE8DF", fg: "#4F6D58", name: "เซจ" },
+  { bg: "#DCE6EE", fg: "#48657D", name: "ฟ้าฝุ่น" },
+  { bg: "#F0DEDC", fg: "#8C5A54", name: "โรสฝุ่น" },
+  { bg: "#EFE4CB", fg: "#8A6D2C", name: "ทราย" },
+  { bg: "#E4DCEE", fg: "#6E5A87", name: "ลาเวนเดอร์" },
+  { bg: "#DCEAE6", fg: "#3F7A6B", name: "มินต์" },
+];
+
+const STATUS = [
+  { key: "want", label: "อยากอ่าน", bg: "#EFE4CB", fg: "#8A6D2C" },
+  { key: "reading", label: "กำลังอ่าน", bg: "#DCEBE0", fg: "#3F7A57" },
+  { key: "done", label: "อ่านแล้ว", bg: "#DCE6EE", fg: "#3F5E85" },
+  { key: "paused", label: "หยุดอ่าน", bg: "#F0DEDC", fg: "#8C4A43" },
+];
+const statusOf = (key) => STATUS.find((s) => s.key === key) || STATUS[0];
+
+const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+
+function hashTone(str) {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  const i = Math.abs(hash) % PALETTE.length;
+  return PALETTE[i];
+}
+
+function seedData() {
+  const collections = [
+    { id: "c1", name: "Luckpim", colorIndex: 0 },
+    { id: "c2", name: "First Page Pro", colorIndex: 1 },
+    { id: "c3", name: "Siam Inter", colorIndex: 2 },
+    { id: "c4", name: "Phoenix Next", colorIndex: 3 },
+    { id: "c5", name: "Animag", colorIndex: 4 },
+    { id: "c6", name: "Zenshu", colorIndex: 5 },
+  ];
+  const series = [
+    { id: "s1", collectionId: "c1", title: "ตำนานเทพเจ้าจันทรา", publisher: "Luckpim", genre: "Fantasy", status: "reading", coverUrl: "" },
+    { id: "s2", collectionId: "c1", title: "บันทึกนักฝันแห่งราตรี", publisher: "Luckpim", genre: "Romance", status: "want", coverUrl: "" },
+    { id: "s3", collectionId: "c5", title: "สาวน้อยนักเวทกับก็อบลิน", publisher: "Animag", genre: "Comedy", status: "done", coverUrl: "" },
+    { id: "s4", collectionId: "c3", title: "ราชันย์เงาแห่งรัตติกาล", publisher: "Siam Inter", genre: "Action", status: "paused", coverUrl: "" },
+  ];
+  const volumes = [
+    { id: "v1", seriesId: "s1", number: 1, coverUrl: "", read: true },
+    { id: "v2", seriesId: "s1", number: 2, coverUrl: "", read: true },
+    { id: "v3", seriesId: "s1", number: 3, coverUrl: "", read: false },
+    { id: "v4", seriesId: "s2", number: 1, coverUrl: "", read: false },
+    { id: "v5", seriesId: "s3", number: 1, coverUrl: "", read: true },
+    { id: "v6", seriesId: "s3", number: 2, coverUrl: "", read: true },
+    { id: "v7", seriesId: "s4", number: 1, coverUrl: "", read: true },
+    { id: "v8", seriesId: "s4", number: 2, coverUrl: "", read: false },
+    { id: "v9", seriesId: "s4", number: 3, coverUrl: "", read: false },
+  ];
+  return { collections, series, volumes };
+}
+
+/* ---------------------------------------------------------------------- */
+/* Styles — clean, minimal, easy on the eyes                               */
+/* ---------------------------------------------------------------------- */
+
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
+
+.bs-root {
+  --bg: #FAF9F6;
+  --surface: #FFFFFF;
+  --surface-soft: #F2F1EC;
+  --ink: #2E2D28;
+  --ink-soft: #8B897E;
+  --ink-faint: #B7B5A9;
+  --border: #E9E7E0;
+  --accent: #6E8C77;
+  --accent-soft: #DCE8DF;
+  --accent-ink: #4F6D58;
+  --font-display: 'Inter', 'Noto Sans Thai', sans-serif;
+  --font-body: 'Inter', 'Noto Sans Thai', sans-serif;
+
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  padding: 44px 48px 90px;
+  box-sizing: border-box;
+}
+.bs-root * { box-sizing: border-box; }
+.bs-root button { font-family: inherit; cursor: pointer; }
+.bs-root input { font-family: inherit; }
+
+.muted { color: var(--ink-soft); }
+
+/* ---------- Home ---------- */
+.home-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 40px;
+}
+.home-header h1 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(26px, 3.6vw, 34px);
+  margin: 0 0 6px;
+  color: var(--ink);
+}
+.home-header p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  padding: 11px 18px;
+  border-radius: 10px;
+  font-weight: 500;
+  font-size: 14px;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+.btn-primary:hover { opacity: 0.86; transform: translateY(-1px); }
+.btn-primary.small { padding: 8px 14px; font-size: 13px; border-radius: 8px; }
+
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  padding: 10px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.btn-outline:hover { border-color: var(--ink-faint); background: var(--surface-soft); }
+
+.collection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 18px;
+}
+
+.collection-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  cursor: pointer;
+}
+.collection-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px -14px rgba(46,45,40,0.18);
+  border-color: var(--ink-faint);
+}
+.collection-icon {
+  width: 44px; height: 44px;
+  border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 18px;
+  margin-bottom: 30px;
+}
+.collection-name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--ink);
+  margin: 0 0 3px;
+  line-height: 1.3;
+}
+.collection-count { font-size: 12.5px; color: var(--ink-soft); }
+.card-del {
+  position: absolute;
+  top: 12px; right: 12px;
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface-soft);
+  color: var(--ink-soft);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.collection-card:hover .card-del { display: flex; }
+.card-del:hover { background: var(--border); color: var(--ink); }
+.card-del.confirming { display: flex; background: #F0DEDC; color: #8C4A43; }
+
+.empty-state {
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  padding: 64px 24px;
+  text-align: center;
+  color: var(--ink-soft);
+  background: var(--surface);
+}
+.empty-state h3 { font-family: var(--font-display); color: var(--ink); font-size: 19px; margin: 12px 0 6px; font-weight: 600; }
+.empty-state p { margin: 0; font-size: 14px; }
+
+/* ---------- Sub view header ---------- */
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: var(--ink-soft);
+  font-size: 14px;
+  margin-bottom: 20px;
+  padding: 4px 0;
+  transition: color 0.15s ease;
+}
+.back-btn:hover { color: var(--ink); }
+
+.collection-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(22px, 3vw, 30px);
+  margin: 0 0 22px;
+  color: var(--ink);
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+.collection-title .count-tag { font-size: 14px; font-weight: 400; color: var(--ink-soft); font-family: var(--font-body); }
+
+.toolbar {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  flex: 1;
+  min-width: 220px;
+  max-width: 360px;
+  color: var(--ink-soft);
+}
+.search-box input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--ink);
+  font-size: 14px;
+  width: 100%;
+}
+.search-box input::placeholder { color: var(--ink-faint); }
+
+/* ---------- Series grid ---------- */
+.series-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
+  gap: 22px;
+}
+.series-card {
+  cursor: pointer;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.series-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 26px -16px rgba(46,45,40,0.2);
+  border-color: var(--ink-faint);
+}
+.cover {
+  position: relative;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+}
+.cover-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.cover-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  text-align: center;
+  line-height: 1.4;
+  position: relative;
+  z-index: 1;
+}
+.card-body { padding: 12px 14px 14px; }
+.card-body h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 14.5px;
+  margin: 0 0 4px;
+  color: var(--ink);
+  line-height: 1.35;
+}
+.card-body .meta { font-size: 12px; color: var(--ink-soft); margin: 0 0 8px; }
+.tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.card-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
+.count-text { font-size: 12px; color: var(--ink-faint); }
+
+/* ---------- Series detail ---------- */
+.series-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 22px;
+}
+.series-header h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(22px, 3vw, 28px);
+  margin: 0 0 6px;
+  color: var(--ink);
+}
+.series-header .meta { font-size: 13px; color: var(--ink-soft); margin: 0; }
+.header-actions { display: flex; gap: 8px; }
+.icon-btn {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+.icon-btn:hover { border-color: var(--ink-faint); color: var(--ink); }
+.icon-btn.danger.confirming { border-color: #F0DEDC; background: #F0DEDC; color: #8C4A43; }
+
+.status-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 30px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.status-pill {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-soft);
+  padding: 8px 15px;
+  border-radius: 20px;
+  font-size: 13px;
+  transition: all 0.15s ease;
+}
+.status-pill.active { border-color: transparent; font-weight: 600; }
+
+.volume-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+.volume-card { width: 104px; }
+.volume-face {
+  position: relative;
+  height: 142px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  overflow: hidden;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.volume-card:hover .volume-face { transform: translateY(-3px); box-shadow: 0 10px 20px -14px rgba(46,45,40,0.25); }
+.volume-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.volume-number-text {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 19px;
+  position: relative;
+  z-index: 1;
+}
+.volume-number-label {
+  position: absolute;
+  bottom: 8px; left: 8px;
+  background: rgba(255,255,255,0.88);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+.volume-del {
+  position: absolute;
+  top: 7px; right: 7px;
+  width: 21px; height: 21px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.9);
+  color: var(--ink-soft);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+}
+.volume-card:hover .volume-del { display: flex; }
+.volume-del.confirming { display: flex; background: #F0DEDC; color: #8C4A43; }
+.read-toggle {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--ink-faint);
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+.read-toggle .box {
+  width: 15px; height: 15px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+}
+.read-toggle.read .box { background: var(--accent); border-color: var(--accent); }
+.read-toggle.read { color: var(--accent-ink); }
+
+/* ---------- Modal ---------- */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(46,45,40,0.32);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+  z-index: 50;
+}
+.modal {
+  background: var(--surface);
+  color: var(--ink);
+  width: 100%;
+  max-width: 420px;
+  border-radius: 18px;
+  padding: 26px 26px 22px;
+  box-shadow: 0 30px 60px -20px rgba(46,45,40,0.35);
+  max-height: 88vh;
+  overflow-y: auto;
+}
+.modal-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 18px;
+}
+.modal-head h3 { font-family: var(--font-display); font-size: 18px; margin: 0; font-weight: 600; }
+.modal-head button { background: transparent; border: none; color: var(--ink-soft); }
+.field { margin-bottom: 15px; }
+.field label { display: block; font-size: 12.5px; font-weight: 600; color: var(--ink-soft); margin-bottom: 6px; }
+.field input {
+  width: 100%;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font-size: 14px;
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+.field input:focus { border-color: var(--accent); }
+.field-row { display: flex; gap: 12px; }
+.field-row .field { flex: 1; }
+.swatches { display: flex; gap: 10px; }
+.swatch {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+}
+.swatch.selected { border-color: var(--ink); }
+.status-choice { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.status-choice button {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  padding: 9px;
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--ink);
+}
+.status-choice button.active { border-color: transparent; font-weight: 600; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+.btn-cancel {
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 9px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--ink);
+}
+.btn-save {
+  background: var(--ink);
+  color: #fff;
+  border: none;
+  padding: 9px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.btn-save:disabled { opacity: 0.35; cursor: not-allowed; }
+
+@media (max-width: 640px) {
+  .bs-root { padding: 28px 18px 60px; }
+  .collection-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; }
+  .series-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+}
+`;
+
+/* ---------------------------------------------------------------------- */
+/* Small building blocks                                                   */
+/* ---------------------------------------------------------------------- */
+
+function useConfirmDelete(onConfirm) {
+  const [confirmingId, setConfirmingId] = useState(null);
+  const timerRef = useRef(null);
+  const trigger = useCallback((id, e) => {
+    if (e) e.stopPropagation();
+    if (confirmingId === id) {
+      clearTimeout(timerRef.current);
+      setConfirmingId(null);
+      onConfirm(id);
+    } else {
+      setConfirmingId(id);
+      clearTimeout(timerRef.current);
+      timerRef.current = setTimeout(() => setConfirmingId(null), 3200);
+    }
+  }, [confirmingId, onConfirm]);
+  useEffect(() => () => clearTimeout(timerRef.current), []);
+  return [confirmingId, trigger];
+}
+
+function Cover({ src, imgAlt, imgClassName, fallback }) {
+  const [error, setError] = useState(false);
+  useEffect(() => { setError(false); }, [src]);
+  if (src && !error) {
+    return <img src={src} alt={imgAlt || ""} className={imgClassName} loading="lazy" referrerPolicy="no-referrer" onError={() => setError(true)} />;
+  }
+  return fallback;
+}
+
+function Modal({ title, onClose, children }) {
+  return (
+    <div className="overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal">
+        <div className="modal-head">
+          <h3>{title}</h3>
+          <button onClick={onClose}><X size={18} /></button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/* Main App                                                                */
+/* ---------------------------------------------------------------------- */
+
+export default function App() {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [view, setView] = useState({ type: "home" });
+  const [search, setSearch] = useState("");
+
+  const [showAddCollection, setShowAddCollection] = useState(false);
+  const [showSeriesModal, setShowSeriesModal] = useState(false);
+  const [editingSeries, setEditingSeries] = useState(null);
+  const [showVolumeModal, setShowVolumeModal] = useState(false);
+
+  useEffect(() => {
+    let initial = null;
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) initial = JSON.parse(raw);
+    } catch (e) {
+      initial = null;
+    }
+    if (!initial) {
+      initial = seedData();
+      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(initial)); } catch (e) {}
+    }
+    setData(initial);
+    setLoading(false);
+  }, []);
+
+  const persist = useCallback((next) => {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch (e) {}
+  }, []);
+
+  const update = useCallback((updater) => {
+    setData((prev) => {
+      const next = updater(prev);
+      persist(next);
+      return next;
+    });
+  }, [persist]);
+
+  if (loading || !data) {
+    return (
+      <div className="bs-root">
+        <style>{CSS}</style>
+        <p className="muted">กำลังโหลดชั้นหนังสือ...</p>
+      </div>
+    );
+  }
+
+  const volumeCount = (seriesId) => data.volumes.filter((v) => v.seriesId === seriesId).length;
+  const collectionVolumeCount = (collectionId) =>
+    data.series.filter((s) => s.collectionId === collectionId)
+      .reduce((sum, s) => sum + volumeCount(s.id), 0);
+
+  const addCollection = (name, colorIndex) => {
+    update((prev) => ({ ...prev, collections: [...prev.collections, { id: uid(), name, colorIndex }] }));
+  };
+  const deleteCollection = (id) => {
+    update((prev) => {
+      const seriesIds = prev.series.filter((s) => s.collectionId === id).map((s) => s.id);
+      return {
+        collections: prev.collections.filter((c) => c.id !== id),
+        series: prev.series.filter((s) => s.collectionId !== id),
+        volumes: prev.volumes.filter((v) => !seriesIds.includes(v.seriesId)),
+      };
+    });
+    setView({ type: "home" });
+  };
+
+  const addSeries = (collectionId, form) => {
+    const seriesId = uid();
+    update((prev) => ({
+      ...prev,
+      series: [...prev.series, {
+        id: seriesId, collectionId, title: form.title, publisher: form.publisher,
+        genre: form.genre, status: form.status, coverUrl: form.coverUrl,
+      }],
+      volumes: [...prev.volumes, { id: uid(), seriesId, number: Number(form.volume) || 1, coverUrl: form.coverUrl, read: false }],
+    }));
+  };
+  const editSeries = (seriesId, form) => {
+    update((prev) => ({
+      ...prev,
+      series: prev.series.map((s) => s.id === seriesId ? { ...s, title: form.title, publisher: form.publisher, genre: form.genre, status: form.status, coverUrl: form.coverUrl } : s),
+    }));
+  };
+  const deleteSeries = (id) => {
+    update((prev) => ({
+      ...prev,
+      series: prev.series.filter((s) => s.id !== id),
+      volumes: prev.volumes.filter((v) => v.seriesId !== id),
+    }));
+    setView({ type: "collection", id: data.series.find((s) => s.id === id)?.collectionId });
+  };
+  const setSeriesStatus = (id, status) => {
+    update((prev) => ({ ...prev, series: prev.series.map((s) => s.id === id ? { ...s, status } : s) }));
+  };
+
+  const addVolume = (seriesId, form) => {
+    update((prev) => ({
+      ...prev,
+      volumes: [...prev.volumes, { id: uid(), seriesId, number: Number(form.number) || 1, coverUrl: form.coverUrl, read: !!form.read }],
+    }));
+  };
+  const deleteVolume = (id) => {
+    update((prev) => ({ ...prev, volumes: prev.volumes.filter((v) => v.id !== id) }));
+  };
+  const toggleVolumeRead = (id) => {
+    update((prev) => ({ ...prev, volumes: prev.volumes.map((v) => v.id === id ? { ...v, read: !v.read } : v) }));
+  };
+
+  return (
+    <div className="bs-root">
+      <style>{CSS}</style>
+
+      {view.type === "home" && (
+        <HomeView
+          data={data}
+          collectionVolumeCount={collectionVolumeCount}
+          onOpen={(id) => setView({ type: "collection", id })}
+          onAdd={() => setShowAddCollection(true)}
+          onDelete={deleteCollection}
+        />
+      )}
+
+      {view.type === "collection" && (
+        <CollectionView
+          collection={data.collections.find((c) => c.id === view.id)}
+          seriesList={data.series.filter((s) => s.collectionId === view.id)}
+          volumeCount={volumeCount}
+          search={search}
+          setSearch={setSearch}
+          onBack={() => { setView({ type: "home" }); setSearch(""); }}
+          onOpenSeries={(id) => setView({ type: "series", id })}
+          onAddSeries={() => { setEditingSeries(null); setShowSeriesModal(true); }}
+          onDeleteSeries={deleteSeries}
+        />
+      )}
+
+      {view.type === "series" && (() => {
+        const s = data.series.find((x) => x.id === view.id);
+        if (!s) return null;
+        const vols = data.volumes.filter((v) => v.seriesId === s.id).sort((a, b) => a.number - b.number);
+        return (
+          <SeriesView
+            series={s}
+            volumes={vols}
+            onBack={() => setView({ type: "collection", id: s.collectionId })}
+            onEdit={() => { setEditingSeries(s); setShowSeriesModal(true); }}
+            onDelete={() => deleteSeries(s.id)}
+            onSetStatus={(status) => setSeriesStatus(s.id, status)}
+            onAddVolume={() => setShowVolumeModal(true)}
+            onDeleteVolume={deleteVolume}
+            onToggleRead={toggleVolumeRead}
+          />
+        );
+      })()}
+
+      {showAddCollection && (
+        <AddCollectionModal onClose={() => setShowAddCollection(false)} onSave={(name, colorIndex) => { addCollection(name, colorIndex); setShowAddCollection(false); }} />
+      )}
+
+      {showSeriesModal && (
+        <SeriesModal
+          initial={editingSeries}
+          onClose={() => { setShowSeriesModal(false); setEditingSeries(null); }}
+          onSave={(form) => {
+            if (editingSeries) editSeries(editingSeries.id, form);
+            else addSeries(view.id, form);
+            setShowSeriesModal(false);
+            setEditingSeries(null);
+          }}
+        />
+      )}
+
+      {showVolumeModal && view.type === "series" && (
+        <VolumeModal
+          nextNumber={(data.volumes.filter((v) => v.seriesId === view.id).length || 0) + 1}
+          onClose={() => setShowVolumeModal(false)}
+          onSave={(form) => { addVolume(view.id, form); setShowVolumeModal(false); }}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/* Home                                                                    */
+/* ---------------------------------------------------------------------- */
+
+function HomeView({ data, collectionVolumeCount, onOpen, onAdd, onDelete }) {
+  const [confirmingId, trigger] = useConfirmDelete(onDelete);
+  return (
+    <div className="home">
+      <div className="home-header">
+        <div>
+          <h1>ชั้นหนังสือของฉัน</h1>
+          <p>จัดเก็บและติดตามการอ่านของคุณ</p>
+        </div>
+        <button className="btn-primary" onClick={onAdd}><Plus size={16} /> ชั้นใหม่</button>
+      </div>
+
+      {data.collections.length === 0 ? (
+        <div className="empty-state">
+          <BookOpen size={26} style={{ color: "var(--ink-faint)" }} />
+          <h3>ยังไม่มีชั้นหนังสือ</h3>
+          <p>เริ่มสร้างชั้นแรกของคุณ เช่น ชื่อสำนักพิมพ์ หรือหมวดหมู่ที่ต้องการ</p>
+        </div>
+      ) : (
+        <div className="collection-grid">
+          {data.collections.map((c) => {
+            const tone = PALETTE[c.colorIndex % PALETTE.length];
+            return (
+              <div className="collection-card" key={c.id} onClick={() => onOpen(c.id)}>
+                <div className="collection-icon" style={{ background: tone.bg, color: tone.fg }}>
+                  {c.name.trim().charAt(0).toUpperCase()}
+                </div>
+                <p className="collection-name">{c.name}</p>
+                <p className="collection-count">{collectionVolumeCount(c.id)} เล่ม</p>
+                <button className={`card-del${confirmingId === c.id ? " confirming" : ""}`} title="ลบชั้นนี้" onClick={(e) => trigger(c.id, e)}>
+                  {confirmingId === c.id ? <Check size={12} /> : <X size={12} />}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/* Collection                                                              */
+/* ---------------------------------------------------------------------- */
+
+function CollectionView({ collection, seriesList, volumeCount, search, setSearch, onBack, onOpenSeries, onAddSeries, onDeleteSeries }) {
+  const [confirmingId, trigger] = useConfirmDelete(onDeleteSeries);
+  if (!collection) return null;
+  const filtered = seriesList.filter((s) => s.title.toLowerCase().includes(search.toLowerCase()));
+
+  return (
+    <div>
+      <button className="back-btn" onClick={onBack}><ArrowLeft size={15} /> ชั้นหนังสือ</button>
+      <h2 className="collection-title">{collection.name} <span className="count-tag">{seriesList.length} เรื่อง</span></h2>
+
+      <div className="toolbar">
+        <div className="search-box">
+          <Search size={15} />
+          <input placeholder="ค้นหาชื่อเรื่อง..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        </div>
+        <button className="btn-outline" onClick={onAddSeries}><Plus size={15} /> เพิ่มหนังสือ</button>
+      </div>
+
+      {filtered.length === 0 ? (
+        <div className="empty-state">
+          <h3>{search ? "ไม่พบเรื่องที่ค้นหา" : "ยังไม่มีหนังสือในชั้นนี้"}</h3>
+          <p>{search ? "ลองค้นหาด้วยคำอื่น" : "กดปุ่ม “เพิ่มหนังสือ” เพื่อเริ่มเก็บเล่มแรก"}</p>
+        </div>
+      ) : (
+        <div className="series-grid">
+          {filtered.map((s) => {
+            const st = statusOf(s.status);
+            const tone = hashTone(s.title);
+            return (
+              <div className="series-card" key={s.id} onClick={() => onOpenSeries(s.id)} style={{ position: "relative" }}>
+                <div className="cover" style={{ background: tone.bg, color: tone.fg }}>
+                  <Cover src={s.coverUrl} imgAlt={s.title} imgClassName="cover-img" fallback={<span className="cover-title">{s.title}</span>} />
+                  <button className={`card-del${confirmingId === s.id ? " confirming" : ""}`} title="ลบเรื่องนี้" onClick={(e) => trigger(s.id, e)}>
+                    {confirmingId === s.id ? <Check size={12} /> : <X size={12} />}
+                  </button>
+                </div>
+                <div className="card-body">
+                  <h3>{s.title}</h3>
+                  <p className="meta">{s.publisher || "—"}{s.genre ? ` · ${s.genre}` : ""}</p>
+                  <div className="card-foot">
+                    <span className="tag" style={{ background: st.bg, color: st.fg }}>{st.label}</span>
+                    <span className="count-text">{volumeCount(s.id)} เล่ม</span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/* Series detail                                                           */
+/* ---------------------------------------------------------------------- */
+
+function SeriesView({ series, volumes, onBack, onEdit, onDelete, onSetStatus, onAddVolume, onDeleteVolume, onToggleRead }) {
+  const [confirmingDeleteSeries, triggerDeleteSeries] = useConfirmDelete(onDelete);
+  const [confirmingVolId, triggerVol] = useConfirmDelete(onDeleteVolume);
+
+  return (
+    <div>
+      <button className="back-btn" onClick={onBack}><ArrowLeft size={15} /> กลับไปที่ชั้น</button>
+
+      <div className="series-header">
+        <div>
+          <h2>{series.title}</h2>
+          <p className="meta">{series.publisher || "ไม่ระบุสำนักพิมพ์"}{series.genre ? ` · ${series.genre}` : ""}</p>
+        </div>
+        <div className="header-actions">
+          <button className="icon-btn" title="แก้ไข" onClick={onEdit}><Pencil size={15} /></button>
+          <button className={`icon-btn danger${confirmingDeleteSeries === series.id ? " confirming" : ""}`} title="ลบเรื่องนี้" onClick={(e) => triggerDeleteSeries(series.id, e)}>
+            {confirmingDeleteSeries === series.id ? <Check size={15} /> : <Trash2 size={15} />}
+          </button>
+        </div>
+      </div>
+
+      <div className="status-row">
+        {STATUS.map((st) => (
+          <button
+            key={st.key}
+            className={`status-pill${series.status === st.key ? " active" : ""}`}
+            style={series.status === st.key ? { background: st.bg, color: st.fg } : {}}
+            onClick={() => onSetStatus(st.key)}
+          >
+            {st.label}
+          </button>
+        ))}
+        <button className="btn-primary small" onClick={onAddVolume}><Plus size={14} /> เพิ่มเล่ม</button>
+      </div>
+
+      {volumes.length === 0 ? (
+        <div className="empty-state">
+          <h3>ยังไม่มีเล่มในเรื่องนี้</h3>
+          <p>กดปุ่ม “เพิ่มเล่ม” ด้านบนเพื่อเริ่มเก็บเล่มแรก</p>
+        </div>
+      ) : (
+        <div className="volume-grid">
+          {volumes.map((v) => {
+            const tone = hashTone(series.title + v.number);
+            return (
+              <div className="volume-card" key={v.id}>
+                <div className="volume-face" style={{ background: tone.bg, color: tone.fg }}>
+                  <Cover src={v.coverUrl} imgAlt={`เล่ม ${v.number}`} imgClassName="volume-img" fallback={<span className="volume-number-text">{v.number}</span>} />
+                  <span className="volume-number-label">เล่ม {v.number}</span>
+                  <button className={`volume-del${confirmingVolId === v.id ? " confirming" : ""}`} title="ลบเล่มนี้" onClick={(e) => triggerVol(v.id, e)}>
+                    {confirmingVolId === v.id ? <Check size={11} /> : <X size={11} />}
+                  </button>
+                </div>
+                <button className={`read-toggle${v.read ? " read" : ""}`} onClick={() => onToggleRead(v.id)}>
+                  <span className="box">{v.read && <Check size={10} />}</span>
+                  {v.read ? "อ่านแล้ว" : "ยังไม่อ่าน"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/* Modals                                                                   */
+/* ---------------------------------------------------------------------- */
+
+function AddCollectionModal({ onClose, onSave }) {
+  const [name, setName] = useState("");
+  const [colorIndex, setColorIndex] = useState(0);
+  return (
+    <Modal title="สร้างชั้นใหม่" onClose={onClose}>
+      <div className="field">
+        <label>ชื่อชั้น / สำนักพิมพ์ *</label>
+        <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="เช่น Luckpim" />
+      </div>
+      <div className="field">
+        <label>สีของชั้น</label>
+        <div className="swatches">
+          {PALETTE.map((p, i) => (
+            <div key={p.bg} className={`swatch${colorIndex === i ? " selected" : ""}`} style={{ background: p.bg }} onClick={() => setColorIndex(i)} title={p.name} />
+          ))}
+        </div>
+      </div>
+      <div className="modal-actions">
+        <button className="btn-cancel" onClick={onClose}>ยกเลิก</button>
+        <button className="btn-save" disabled={!name.trim()} onClick={() => onSave(name.trim(), colorIndex)}>บันทึก</button>
+      </div>
+    </Modal>
+  );
+}
+
+function SeriesModal({ initial, onClose, onSave }) {
+  const isEdit = !!initial;
+  const [title, setTitle] = useState(initial?.title || "");
+  const [volume, setVolume] = useState(1);
+  const [coverUrl, setCoverUrl] = useState(initial?.coverUrl || "");
+  const [publisher, setPublisher] = useState(initial?.publisher || "");
+  const [genre, setGenre] = useState(initial?.genre || "");
+  const [status, setStatus] = useState(initial?.status || "want");
+
+  return (
+    <Modal title={isEdit ? "แก้ไขหนังสือ" : "เพิ่มหนังสือ"} onClose={onClose}>
+      <div className="field">
+        <label>ชื่อเรื่อง *</label>
+        <input autoFocus value={title} onChange={(e) => setTitle(e.target.value)} placeholder="เช่น One Piece" />
+      </div>
+      {!isEdit && (
+        <div className="field">
+          <label>เล่มที่ *</label>
+          <input type="number" min="1" value={volume} onChange={(e) => setVolume(e.target.value)} />
+        </div>
+      )}
+      <div className="field">
+        <label>URL รูปปก</label>
+        <input value={coverUrl} onChange={(e) => setCoverUrl(e.target.value)} placeholder="https://..." />
+      </div>
+      <div className="field-row">
+        <div className="field">
+          <label>สำนักพิมพ์</label>
+          <input value={publisher} onChange={(e) => setPublisher(e.target.value)} placeholder="ชื่อสำนักพิมพ์" />
+        </div>
+        <div className="field">
+          <label>แนวเรื่อง</label>
+          <input value={genre} onChange={(e) => setGenre(e.target.value)} placeholder="Fantasy, Romance..." />
+        </div>
+      </div>
+      <div className="field">
+        <label>สถานะ</label>
+        <div className="status-choice">
+          {STATUS.map((st) => (
+            <button key={st.key} className={status === st.key ? "active" : ""} style={status === st.key ? { background: st.bg, color: st.fg } : {}} onClick={() => setStatus(st.key)}>{st.label}</button>
+          ))}
+        </div>
+      </div>
+      <div className="modal-actions">
+        <button className="btn-cancel" onClick={onClose}>ยกเลิก</button>
+        <button className="btn-save" disabled={!title.trim()} onClick={() => onSave({ title: title.trim(), volume, coverUrl: coverUrl.trim(), publisher: publisher.trim(), genre: genre.trim(), status })}>บันทึก</button>
+      </div>
+    </Modal>
+  );
+}
+
+function VolumeModal({ nextNumber, onClose, onSave }) {
+  const [number, setNumber] = useState(nextNumber);
+  const [coverUrl, setCoverUrl] = useState("");
+  const [read, setRead] = useState(false);
+  return (
+    <Modal title="เพิ่มเล่มใหม่" onClose={onClose}>
+      <div className="field">
+        <label>เล่มที่ *</label>
+        <input autoFocus type="number" min="1" value={number} onChange={(e) => setNumber(e.target.value)} />
+      </div>
+      <div className="field">
+        <label>URL รูปปก</label>
+        <input value={coverUrl} onChange={(e) => setCoverUrl(e.target.value)} placeholder="https://..." />
+      </div>
+      <div className="field">
+        <button className={`read-toggle${read ? " read" : ""}`} style={{ fontSize: 13 }} onClick={() => setRead((r) => !r)}>
+          <span className="box">{read && <Check size={10} />}</span>
+          อ่านแล้ว
+        </button>
+      </div>
+      <div className="modal-actions">
+        <button className="btn-cancel" onClick={onClose}>ยกเลิก</button>
+        <button className="btn-save" onClick={() => onSave({ number, coverUrl: coverUrl.trim(), read })}>บันทึก</button>
+      </div>
+    </Modal>
+  );
+}
