@@ -77,6 +77,8 @@ function seedData() {
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
 
+html, body { background: #FAF9F6; margin: 0; }
+
 .bs-root {
   --bg: #FAF9F6;
   --surface: #FFFFFF;
@@ -96,6 +98,8 @@ const CSS = `
   color: var(--ink);
   font-family: var(--font-body);
   padding: 28px 32px 56px;
+  max-width: 1180px;
+  margin: 0 auto;
   box-sizing: border-box;
 }
 .bs-root * { box-sizing: border-box; }
@@ -637,7 +641,7 @@ const CSS = `
 .btn-save:disabled { opacity: 0.35; cursor: not-allowed; }
 
 @media (max-width: 640px) {
-  .bs-root { padding: 14px 10px 40px; }
+  .bs-root { padding: 14px 10px 40px; max-width: none; }
 
   .home-header h1 { font-size: 24px; }
   .home-header p { font-size: 13px; }
