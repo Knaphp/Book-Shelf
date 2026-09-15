@@ -95,7 +95,7 @@ const CSS = `
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-body);
-  padding: 64px 96px 130px;
+  padding: 28px 32px 56px;
   box-sizing: border-box;
 }
 .bs-root * { box-sizing: border-box; }
@@ -637,7 +637,7 @@ const CSS = `
 .btn-save:disabled { opacity: 0.35; cursor: not-allowed; }
 
 @media (max-width: 640px) {
-  .bs-root { padding: 24px 14px 56px; }
+  .bs-root { padding: 14px 10px 40px; }
 
   .home-header h1 { font-size: 24px; }
   .home-header p { font-size: 13px; }
