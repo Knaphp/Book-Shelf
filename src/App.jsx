@@ -181,13 +181,13 @@ const CSS = `
   border-color: var(--ink-faint);
 }
 .collection-icon {
-  width: 56px; height: 56px;
-  border-radius: 14px;
+  width: 88px; height: 88px;
+  border-radius: 18px;
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 22px;
-  margin-bottom: 36px;
+  font-size: 32px;
+  margin-bottom: 20px;
   overflow: hidden;
   border: 1px solid var(--border);
 }
@@ -195,7 +195,7 @@ const CSS = `
   width: 100%;
   height: 100%;
   object-fit: contain;
-  padding: 7px;
+  padding: 10px;
   box-sizing: border-box;
 }
 .collection-card-actions {
@@ -644,7 +644,7 @@ const CSS = `
 
   .collection-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
   .collection-card { padding: 12px; border-radius: 12px; }
-  .collection-icon { width: 36px; height: 36px; font-size: 15px; border-radius: 9px; margin-bottom: 16px; }
+  .collection-icon { width: 56px; height: 56px; font-size: 22px; border-radius: 13px; margin-bottom: 14px; }
   .collection-name { font-size: 13px; }
   .collection-count { font-size: 11px; }
 
