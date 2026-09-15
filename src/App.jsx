@@ -188,6 +188,78 @@ const CSS = `
   font-weight: 600;
   font-size: 22px;
   margin-bottom: 36px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.collection-icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 7px;
+  box-sizing: border-box;
+}
+.collection-card-actions {
+  position: absolute;
+  top: 12px; right: 12px;
+  display: none;
+  gap: 6px;
+}
+.collection-card:hover .collection-card-actions { display: flex; }
+.card-edit {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface-soft);
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.card-edit:hover { background: var(--border); color: var(--ink); }
+.collection-card-actions .card-del { position: static; }
+.paste-zone {
+  border: 1.5px dashed var(--border);
+  border-radius: 12px;
+  min-height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  cursor: pointer;
+  background: var(--bg);
+  transition: border-color 0.15s ease, background 0.15s ease;
+  outline: none;
+}
+.paste-zone:hover, .paste-zone:focus, .paste-zone.drag-over {
+  border-color: var(--accent);
+  background: var(--surface-soft);
+}
+.paste-hint {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+  text-align: center;
+  line-height: 1.6;
+  padding: 10px;
+}
+.paste-preview {
+  max-width: 72px;
+  max-height: 72px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+.paste-remove {
+  position: absolute;
+  top: 6px; right: 6px;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface);
+  color: var(--ink-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(46,45,40,0.15);
 }
 .collection-name {
   font-family: var(--font-display);
@@ -649,6 +721,7 @@ export default function App() {
   const [search, setSearch] = useState("");
 
   const [showAddCollection, setShowAddCollection] = useState(false);
+  const [editingCollection, setEditingCollection] = useState(null);
   const [showSeriesModal, setShowSeriesModal] = useState(false);
   const [editingSeries, setEditingSeries] = useState(null);
   const [showVolumeModal, setShowVolumeModal] = useState(false);
@@ -746,8 +819,14 @@ export default function App() {
     data.series.filter((s) => s.collectionId === collectionId)
       .reduce((sum, s) => sum + volumeCount(s.id), 0);
 
-  const addCollection = (name, colorIndex) => {
-    update((prev) => ({ ...prev, collections: [...prev.collections, { id: uid(), name, colorIndex }] }));
+  const addCollection = (name, colorIndex, iconUrl) => {
+    update((prev) => ({ ...prev, collections: [...prev.collections, { id: uid(), name, colorIndex, iconUrl: iconUrl || null }] }));
+  };
+  const editCollection = (id, name, colorIndex, iconUrl) => {
+    update((prev) => ({
+      ...prev,
+      collections: prev.collections.map((c) => c.id === id ? { ...c, name, colorIndex, iconUrl: iconUrl || null } : c),
+    }));
   };
   const deleteCollection = (id) => {
     update((prev) => {
@@ -812,7 +891,8 @@ export default function App() {
           data={data}
           collectionVolumeCount={collectionVolumeCount}
           onOpen={(id) => setView({ type: "collection", id })}
-          onAdd={() => setShowAddCollection(true)}
+          onAdd={() => { setEditingCollection(null); setShowAddCollection(true); }}
+          onEdit={(c) => { setEditingCollection(c); setShowAddCollection(true); }}
           onDelete={deleteCollection}
           syncError={syncError}
           onOpenSync={() => setShowSyncModal(true)}
@@ -853,7 +933,16 @@ export default function App() {
       })()}
 
       {showAddCollection && (
-        <AddCollectionModal onClose={() => setShowAddCollection(false)} onSave={(name, colorIndex) => { addCollection(name, colorIndex); setShowAddCollection(false); }} />
+        <AddCollectionModal
+          initial={editingCollection}
+          onClose={() => { setShowAddCollection(false); setEditingCollection(null); }}
+          onSave={(name, colorIndex, iconUrl) => {
+            if (editingCollection) editCollection(editingCollection.id, name, colorIndex, iconUrl);
+            else addCollection(name, colorIndex, iconUrl);
+            setShowAddCollection(false);
+            setEditingCollection(null);
+          }}
+        />
       )}
 
       {showSyncModal && (
@@ -892,7 +981,7 @@ export default function App() {
 /* Home                                                                    */
 /* ---------------------------------------------------------------------- */
 
-function HomeView({ data, collectionVolumeCount, onOpen, onAdd, onDelete, syncError, onOpenSync }) {
+function HomeView({ data, collectionVolumeCount, onOpen, onAdd, onEdit, onDelete, syncError, onOpenSync }) {
   const [confirmingId, trigger] = useConfirmDelete(onDelete);
   return (
     <div className="home">
@@ -921,14 +1010,17 @@ function HomeView({ data, collectionVolumeCount, onOpen, onAdd, onDelete, syncEr
             const tone = PALETTE[c.colorIndex % PALETTE.length];
             return (
               <div className="collection-card" key={c.id} onClick={() => onOpen(c.id)}>
-                <div className="collection-icon" style={{ background: tone.bg, color: tone.fg }}>
-                  {c.name.trim().charAt(0).toUpperCase()}
+                <div className="collection-icon" style={c.iconUrl ? { background: "#fff" } : { background: tone.bg, color: tone.fg }}>
+                  {c.iconUrl ? <img src={c.iconUrl} alt="" className="collection-icon-img" /> : c.name.trim().charAt(0).toUpperCase()}
                 </div>
                 <p className="collection-name">{c.name}</p>
                 <p className="collection-count">{collectionVolumeCount(c.id)} เล่ม</p>
-                <button className={`card-del${confirmingId === c.id ? " confirming" : ""}`} title="ลบชั้นนี้" onClick={(e) => trigger(c.id, e)}>
-                  {confirmingId === c.id ? <Check size={12} /> : <X size={12} />}
-                </button>
+                <div className="collection-card-actions">
+                  <button className="card-edit" title="แก้ไขชั้นนี้" onClick={(e) => { e.stopPropagation(); onEdit(c); }}><Pencil size={12} /></button>
+                  <button className={`card-del${confirmingId === c.id ? " confirming" : ""}`} title="ลบชั้นนี้" onClick={(e) => trigger(c.id, e)}>
+                    {confirmingId === c.id ? <Check size={12} /> : <X size={12} />}
+                  </button>
+                </div>
               </div>
             );
           })}
@@ -1111,17 +1203,94 @@ function SyncModal({ code, onClose, onConnect }) {
   );
 }
 
-function AddCollectionModal({ onClose, onSave }) {
-  const [name, setName] = useState("");
-  const [colorIndex, setColorIndex] = useState(0);
+function resizeImageFile(file, maxDim = 160) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > height) {
+          if (width > maxDim) { height = Math.round(height * (maxDim / width)); width = maxDim; }
+        } else {
+          if (height > maxDim) { width = Math.round(width * (maxDim / height)); height = maxDim; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function AddCollectionModal({ initial, onClose, onSave }) {
+  const isEdit = !!initial;
+  const [name, setName] = useState(initial?.name || "");
+  const [colorIndex, setColorIndex] = useState(initial?.colorIndex || 0);
+  const [iconUrl, setIconUrl] = useState(initial?.iconUrl || null);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleFile = async (file) => {
+    if (file && file.type && file.type.startsWith("image/")) {
+      try {
+        const dataUrl = await resizeImageFile(file);
+        setIconUrl(dataUrl);
+      } catch (e) {}
+    }
+  };
+  const handlePaste = (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+      if (item.type && item.type.startsWith("image/")) {
+        e.preventDefault();
+        const file = item.getAsFile();
+        if (file) handleFile(file);
+        break;
+      }
+    }
+  };
+
   return (
-    <Modal title="สร้างชั้นใหม่" onClose={onClose}>
+    <Modal title={isEdit ? "แก้ไขชั้น" : "สร้างชั้นใหม่"} onClose={onClose}>
       <div className="field">
         <label>ชื่อชั้น / สำนักพิมพ์ *</label>
         <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="เช่น Luckpim" />
       </div>
       <div className="field">
-        <label>สีของชั้น</label>
+        <label>โลโก้</label>
+        <div
+          className={`paste-zone${dragOver ? " drag-over" : ""}`}
+          tabIndex={0}
+          onPaste={handlePaste}
+          onClick={() => fileInputRef.current?.click()}
+          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+          onDragLeave={() => setDragOver(false)}
+          onDrop={(e) => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files?.[0]); }}
+        >
+          {iconUrl ? (
+            <>
+              <img src={iconUrl} alt="" className="paste-preview" />
+              <button type="button" className="paste-remove" onClick={(e) => { e.stopPropagation(); setIconUrl(null); }} title="เอาโลโก้ออก">
+                <X size={12} />
+              </button>
+            </>
+          ) : (
+            <span className="paste-hint">คลิกแล้ววาง (Ctrl+V)<br />หรือคลิกเพื่อเลือกไฟล์</span>
+          )}
+        </div>
+        <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={(e) => handleFile(e.target.files?.[0])} />
+      </div>
+      <div className="field">
+        <label>สีพื้นหลัง (ใช้เมื่อไม่มีโลโก้)</label>
         <div className="swatches">
           {PALETTE.map((p, i) => (
             <div key={p.bg} className={`swatch${colorIndex === i ? " selected" : ""}`} style={{ background: p.bg }} onClick={() => setColorIndex(i)} title={p.name} />
@@ -1130,7 +1299,7 @@ function AddCollectionModal({ onClose, onSave }) {
       </div>
       <div className="modal-actions">
         <button className="btn-cancel" onClick={onClose}>ยกเลิก</button>
-        <button className="btn-save" disabled={!name.trim()} onClick={() => onSave(name.trim(), colorIndex)}>บันทึก</button>
+        <button className="btn-save" disabled={!name.trim()} onClick={() => onSave(name.trim(), colorIndex, iconUrl)}>บันทึก</button>
       </div>
     </Modal>
   );
