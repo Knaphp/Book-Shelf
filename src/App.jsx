@@ -98,7 +98,7 @@ html, body { background: #FAF9F6; margin: 0; }
   color: var(--ink);
   font-family: var(--font-body);
   padding: 28px 32px 56px;
-  max-width: 1180px;
+  max-width: 1420px;
   margin: 0 auto;
   box-sizing: border-box;
 }
