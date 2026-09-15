@@ -26,13 +26,11 @@ const PALETTE = [
   { bg: "#DCEAE6", fg: "#3F7A6B", name: "มินต์" },
 ];
 
-const STATUS = [
-  { key: "want", label: "อยากอ่าน", bg: "#EFE4CB", fg: "#8A6D2C" },
-  { key: "reading", label: "กำลังอ่าน", bg: "#DCEBE0", fg: "#3F7A57" },
-  { key: "done", label: "อ่านแล้ว", bg: "#DCE6EE", fg: "#3F5E85" },
-  { key: "paused", label: "หยุดอ่าน", bg: "#F0DEDC", fg: "#8C4A43" },
+const TYPES = [
+  { key: "manga", label: "มังงะ", bg: "#DCEBE0", fg: "#3F7A57" },
+  { key: "novel", label: "นิยาย", bg: "#DCE6EE", fg: "#3F5E85" },
 ];
-const statusOf = (key) => STATUS.find((s) => s.key === key) || STATUS[0];
+const typeOf = (key) => TYPES.find((t) => t.key === key) || TYPES[0];
 
 const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 
@@ -53,10 +51,10 @@ function seedData() {
     { id: "c6", name: "Zenshu", colorIndex: 5 },
   ];
   const series = [
-    { id: "s1", collectionId: "c1", title: "ตำนานเทพเจ้าจันทรา", publisher: "Luckpim", genre: "Fantasy", status: "reading", coverUrl: "" },
-    { id: "s2", collectionId: "c1", title: "บันทึกนักฝันแห่งราตรี", publisher: "Luckpim", genre: "Romance", status: "want", coverUrl: "" },
-    { id: "s3", collectionId: "c5", title: "สาวน้อยนักเวทกับก็อบลิน", publisher: "Animag", genre: "Comedy", status: "done", coverUrl: "" },
-    { id: "s4", collectionId: "c3", title: "ราชันย์เงาแห่งรัตติกาล", publisher: "Siam Inter", genre: "Action", status: "paused", coverUrl: "" },
+    { id: "s1", collectionId: "c1", title: "ตำนานเทพเจ้าจันทรา", publisher: "Luckpim", genre: "Fantasy", type: "manga", coverUrl: "" },
+    { id: "s2", collectionId: "c1", title: "บันทึกนักฝันแห่งราตรี", publisher: "Luckpim", genre: "Romance", type: "novel", coverUrl: "" },
+    { id: "s3", collectionId: "c5", title: "สาวน้อยนักเวทกับก็อบลิน", publisher: "Animag", genre: "Comedy", type: "manga", coverUrl: "" },
+    { id: "s4", collectionId: "c3", title: "ราชันย์เงาแห่งรัตติกาล", publisher: "Siam Inter", genre: "Action", type: "novel", coverUrl: "" },
   ];
   const volumes = [
     { id: "v1", seriesId: "s1", number: 1, coverUrl: "", read: true },
@@ -214,6 +212,7 @@ const CSS = `
   transition: background 0.15s ease, color 0.15s ease;
 }
 .collection-card:hover .card-del { display: flex; }
+.series-card-wrap:hover .card-del { display: flex; }
 .card-del:hover { background: var(--border); color: var(--ink); }
 .card-del.confirming { display: flex; background: #F0DEDC; color: #8C4A43; }
 
@@ -289,29 +288,42 @@ const CSS = `
 .series-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 28px;
+  gap: 30px 28px;
 }
-.series-card {
+.series-card-wrap {
+  position: relative;
   cursor: pointer;
+}
+.stack-layer {
+  position: absolute;
+  inset: 0;
+  border-radius: 14px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+}
+.stack-layer.stack-1 { transform: translate(6px, 7px); z-index: 1; }
+.stack-layer.stack-2 { transform: translate(12px, 14px); z-index: 0; opacity: 0.7; }
+.series-card {
+  position: relative;
+  z-index: 2;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
   overflow: hidden;
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
-.series-card:hover {
+.series-card-wrap:hover .series-card {
   transform: translateY(-3px);
   box-shadow: 0 12px 26px -16px rgba(46,45,40,0.2);
   border-color: var(--ink-faint);
 }
 .cover {
   position: relative;
-  height: 240px;
+  aspect-ratio: 2 / 3;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 16px;
-  border-bottom: 1px solid var(--border);
   overflow: hidden;
 }
 .cover-img {
@@ -330,26 +342,17 @@ const CSS = `
   position: relative;
   z-index: 1;
 }
-.card-body { padding: 14px 16px 16px; }
-.card-body h3 {
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 16px;
-  margin: 0 0 4px;
-  color: var(--ink);
-  line-height: 1.35;
-}
-.card-body .meta { font-size: 13px; color: var(--ink-soft); margin: 0 0 9px; }
-.tag {
+.type-pill {
+  position: absolute;
+  bottom: 8px; left: 8px;
+  z-index: 1;
   display: inline-flex;
   align-items: center;
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 600;
   padding: 3px 11px;
   border-radius: 20px;
 }
-.card-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
-.count-text { font-size: 12.5px; color: var(--ink-faint); }
 
 /* ---------- Series detail ---------- */
 .series-header {
@@ -574,13 +577,11 @@ const CSS = `
   .collection-count { font-size: 11px; }
 
   .series-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
-  .cover { height: 108px; padding: 6px; }
-  .cover-title { font-size: 10.5px; }
-  .card-body { padding: 8px 8px 10px; }
-  .card-body h3 { font-size: 11.5px; }
-  .card-body .meta { font-size: 10px; margin-bottom: 6px; }
-  .tag { font-size: 9.5px; padding: 2px 7px; }
-  .count-text { font-size: 10px; }
+  .cover { padding: 6px; }
+  .cover-title { font-size: 9.5px; }
+  .type-pill { font-size: 9px; padding: 2px 7px; bottom: 5px; left: 5px; }
+  .stack-layer.stack-1 { transform: translate(3px, 4px); }
+  .stack-layer.stack-2 { transform: translate(6px, 8px); }
 
   .volume-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
   .volume-card { width: 100%; }
@@ -766,7 +767,7 @@ export default function App() {
       ...prev,
       series: [...prev.series, {
         id: seriesId, collectionId, title: form.title, publisher: form.publisher,
-        genre: form.genre, status: form.status, coverUrl: form.coverUrl,
+        genre: form.genre, type: form.type, coverUrl: form.coverUrl,
       }],
       volumes: [...prev.volumes, { id: uid(), seriesId, number: Number(form.volume) || 1, coverUrl: form.coverUrl, read: false }],
     }));
@@ -774,7 +775,7 @@ export default function App() {
   const editSeries = (seriesId, form) => {
     update((prev) => ({
       ...prev,
-      series: prev.series.map((s) => s.id === seriesId ? { ...s, title: form.title, publisher: form.publisher, genre: form.genre, status: form.status, coverUrl: form.coverUrl } : s),
+      series: prev.series.map((s) => s.id === seriesId ? { ...s, title: form.title, publisher: form.publisher, genre: form.genre, type: form.type, coverUrl: form.coverUrl } : s),
     }));
   };
   const deleteSeries = (id) => {
@@ -785,8 +786,8 @@ export default function App() {
     }));
     setView({ type: "collection", id: data.series.find((s) => s.id === id)?.collectionId });
   };
-  const setSeriesStatus = (id, status) => {
-    update((prev) => ({ ...prev, series: prev.series.map((s) => s.id === id ? { ...s, status } : s) }));
+  const setSeriesType = (id, type) => {
+    update((prev) => ({ ...prev, series: prev.series.map((s) => s.id === id ? { ...s, type } : s) }));
   };
 
   const addVolume = (seriesId, form) => {
@@ -843,7 +844,7 @@ export default function App() {
             onBack={() => setView({ type: "collection", id: s.collectionId })}
             onEdit={() => { setEditingSeries(s); setShowSeriesModal(true); }}
             onDelete={() => deleteSeries(s.id)}
-            onSetStatus={(status) => setSeriesStatus(s.id, status)}
+            onSetType={(type) => setSeriesType(s.id, type)}
             onAddVolume={() => setShowVolumeModal(true)}
             onDeleteVolume={deleteVolume}
             onToggleRead={toggleVolumeRead}
@@ -967,22 +968,20 @@ function CollectionView({ collection, seriesList, volumeCount, search, setSearch
       ) : (
         <div className="series-grid">
           {filtered.map((s) => {
-            const st = statusOf(s.status);
+            const tp = typeOf(s.type);
             const tone = hashTone(s.title);
+            const vc = volumeCount(s.id);
             return (
-              <div className="series-card" key={s.id} onClick={() => onOpenSeries(s.id)} style={{ position: "relative" }}>
-                <div className="cover" style={{ background: tone.bg, color: tone.fg }}>
-                  <Cover src={s.coverUrl} imgAlt={s.title} imgClassName="cover-img" fallback={<span className="cover-title">{s.title}</span>} />
-                  <button className={`card-del${confirmingId === s.id ? " confirming" : ""}`} title="ลบเรื่องนี้" onClick={(e) => trigger(s.id, e)}>
-                    {confirmingId === s.id ? <Check size={12} /> : <X size={12} />}
-                  </button>
-                </div>
-                <div className="card-body">
-                  <h3>{s.title}</h3>
-                  <p className="meta">{s.publisher || "—"}{s.genre ? ` · ${s.genre}` : ""}</p>
-                  <div className="card-foot">
-                    <span className="tag" style={{ background: st.bg, color: st.fg }}>{st.label}</span>
-                    <span className="count-text">{volumeCount(s.id)} เล่ม</span>
+              <div className={`series-card-wrap${vc > 1 ? " stacked" : ""}`} key={s.id} onClick={() => onOpenSeries(s.id)} title={s.title}>
+                {vc > 1 && <div className="stack-layer stack-2" />}
+                {vc > 1 && <div className="stack-layer stack-1" />}
+                <div className="series-card">
+                  <div className="cover" style={{ background: tone.bg, color: tone.fg }}>
+                    <Cover src={s.coverUrl} imgAlt={s.title} imgClassName="cover-img" fallback={<span className="cover-title">{s.title}</span>} />
+                    <span className="type-pill" style={{ background: tp.bg, color: tp.fg }}>{tp.label}</span>
+                    <button className={`card-del${confirmingId === s.id ? " confirming" : ""}`} title="ลบเรื่องนี้" onClick={(e) => trigger(s.id, e)}>
+                      {confirmingId === s.id ? <Check size={12} /> : <X size={12} />}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -998,7 +997,7 @@ function CollectionView({ collection, seriesList, volumeCount, search, setSearch
 /* Series detail                                                           */
 /* ---------------------------------------------------------------------- */
 
-function SeriesView({ series, volumes, onBack, onEdit, onDelete, onSetStatus, onAddVolume, onDeleteVolume, onToggleRead }) {
+function SeriesView({ series, volumes, onBack, onEdit, onDelete, onSetType, onAddVolume, onDeleteVolume, onToggleRead }) {
   const [confirmingDeleteSeries, triggerDeleteSeries] = useConfirmDelete(onDelete);
   const [confirmingVolId, triggerVol] = useConfirmDelete(onDeleteVolume);
 
@@ -1020,14 +1019,14 @@ function SeriesView({ series, volumes, onBack, onEdit, onDelete, onSetStatus, on
       </div>
 
       <div className="status-row">
-        {STATUS.map((st) => (
+        {TYPES.map((tp) => (
           <button
-            key={st.key}
-            className={`status-pill${series.status === st.key ? " active" : ""}`}
-            style={series.status === st.key ? { background: st.bg, color: st.fg } : {}}
-            onClick={() => onSetStatus(st.key)}
+            key={tp.key}
+            className={`status-pill${series.type === tp.key ? " active" : ""}`}
+            style={series.type === tp.key ? { background: tp.bg, color: tp.fg } : {}}
+            onClick={() => onSetType(tp.key)}
           >
-            {st.label}
+            {tp.label}
           </button>
         ))}
         <button className="btn-primary small" onClick={onAddVolume}><Plus size={14} /> เพิ่มเล่ม</button>
@@ -1144,7 +1143,7 @@ function SeriesModal({ initial, onClose, onSave }) {
   const [coverUrl, setCoverUrl] = useState(initial?.coverUrl || "");
   const [publisher, setPublisher] = useState(initial?.publisher || "");
   const [genre, setGenre] = useState(initial?.genre || "");
-  const [status, setStatus] = useState(initial?.status || "want");
+  const [type, setType] = useState(initial?.type || "manga");
 
   return (
     <Modal title={isEdit ? "แก้ไขหนังสือ" : "เพิ่มหนังสือ"} onClose={onClose}>
@@ -1173,16 +1172,16 @@ function SeriesModal({ initial, onClose, onSave }) {
         </div>
       </div>
       <div className="field">
-        <label>สถานะ</label>
+        <label>ประเภท</label>
         <div className="status-choice">
-          {STATUS.map((st) => (
-            <button key={st.key} className={status === st.key ? "active" : ""} style={status === st.key ? { background: st.bg, color: st.fg } : {}} onClick={() => setStatus(st.key)}>{st.label}</button>
+          {TYPES.map((tp) => (
+            <button key={tp.key} className={type === tp.key ? "active" : ""} style={type === tp.key ? { background: tp.bg, color: tp.fg } : {}} onClick={() => setType(tp.key)}>{tp.label}</button>
           ))}
         </div>
       </div>
       <div className="modal-actions">
         <button className="btn-cancel" onClick={onClose}>ยกเลิก</button>
-        <button className="btn-save" disabled={!title.trim()} onClick={() => onSave({ title: title.trim(), volume, coverUrl: coverUrl.trim(), publisher: publisher.trim(), genre: genre.trim(), status })}>บันทึก</button>
+        <button className="btn-save" disabled={!title.trim()} onClick={() => onSave({ title: title.trim(), volume, coverUrl: coverUrl.trim(), publisher: publisher.trim(), genre: genre.trim(), type })}>บันทึก</button>
       </div>
     </Modal>
   );
