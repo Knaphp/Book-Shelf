@@ -97,7 +97,7 @@ const CSS = `
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-body);
-  padding: 44px 48px 90px;
+  padding: 64px 96px 130px;
   box-sizing: border-box;
 }
 .bs-root * { box-sizing: border-box; }
@@ -113,16 +113,16 @@ const CSS = `
   align-items: flex-end;
   flex-wrap: wrap;
   gap: 16px;
-  margin-bottom: 40px;
+  margin-bottom: 48px;
 }
 .home-header h1 {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: clamp(26px, 3.6vw, 34px);
+  font-size: clamp(28px, 3.6vw, 42px);
   margin: 0 0 6px;
   color: var(--ink);
 }
-.home-header p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+.home-header p { margin: 0; font-size: 16px; color: var(--ink-soft); }
 .sync-banner {
   background: #F0DEDC;
   color: #8C4A43;
@@ -139,10 +139,10 @@ const CSS = `
   background: var(--ink);
   color: #fff;
   border: none;
-  padding: 11px 18px;
+  padding: 13px 22px;
   border-radius: 10px;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 15px;
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
 .btn-primary:hover { opacity: 0.86; transform: translateY(-1px); }
@@ -155,25 +155,25 @@ const CSS = `
   background: var(--surface);
   color: var(--ink);
   border: 1px solid var(--border);
-  padding: 10px 16px;
+  padding: 12px 18px;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: 15px;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 .btn-outline:hover { border-color: var(--ink-faint); background: var(--surface-soft); }
 
 .collection-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 28px;
 }
 
 .collection-card {
   position: relative;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 20px;
+  border-radius: 18px;
+  padding: 26px;
   transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
   cursor: pointer;
 }
@@ -183,23 +183,23 @@ const CSS = `
   border-color: var(--ink-faint);
 }
 .collection-icon {
-  width: 44px; height: 44px;
-  border-radius: 11px;
+  width: 56px; height: 56px;
+  border-radius: 14px;
   display: flex; align-items: center; justify-content: center;
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 18px;
-  margin-bottom: 30px;
+  font-size: 22px;
+  margin-bottom: 36px;
 }
 .collection-name {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 16px;
+  font-size: 19px;
   color: var(--ink);
   margin: 0 0 3px;
   line-height: 1.3;
 }
-.collection-count { font-size: 12.5px; color: var(--ink-soft); }
+.collection-count { font-size: 13.5px; color: var(--ink-soft); }
 .card-del {
   position: absolute;
   top: 12px; right: 12px;
@@ -246,21 +246,21 @@ const CSS = `
 .collection-title {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: clamp(22px, 3vw, 30px);
-  margin: 0 0 22px;
+  font-size: clamp(24px, 3vw, 34px);
+  margin: 0 0 26px;
   color: var(--ink);
   display: flex;
   align-items: baseline;
   gap: 12px;
 }
-.collection-title .count-tag { font-size: 14px; font-weight: 400; color: var(--ink-soft); font-family: var(--font-body); }
+.collection-title .count-tag { font-size: 15px; font-weight: 400; color: var(--ink-soft); font-family: var(--font-body); }
 
 .toolbar {
   display: flex;
   gap: 14px;
   flex-wrap: wrap;
   justify-content: space-between;
-  margin-bottom: 28px;
+  margin-bottom: 34px;
 }
 .search-box {
   display: flex;
@@ -269,10 +269,10 @@ const CSS = `
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
-  padding: 10px 14px;
+  padding: 12px 16px;
   flex: 1;
   min-width: 220px;
-  max-width: 360px;
+  max-width: 380px;
   color: var(--ink-soft);
 }
 .search-box input {
@@ -280,7 +280,7 @@ const CSS = `
   border: none;
   outline: none;
   color: var(--ink);
-  font-size: 14px;
+  font-size: 15px;
   width: 100%;
 }
 .search-box input::placeholder { color: var(--ink-faint); }
@@ -288,8 +288,8 @@ const CSS = `
 /* ---------- Series grid ---------- */
 .series-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(168px, 1fr));
-  gap: 22px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 28px;
 }
 .series-card {
   cursor: pointer;
@@ -306,7 +306,7 @@ const CSS = `
 }
 .cover {
   position: relative;
-  height: 200px;
+  height: 240px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -324,32 +324,32 @@ const CSS = `
 .cover-title {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 15px;
+  font-size: 16px;
   text-align: center;
   line-height: 1.4;
   position: relative;
   z-index: 1;
 }
-.card-body { padding: 12px 14px 14px; }
+.card-body { padding: 14px 16px 16px; }
 .card-body h3 {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 14.5px;
+  font-size: 16px;
   margin: 0 0 4px;
   color: var(--ink);
   line-height: 1.35;
 }
-.card-body .meta { font-size: 12px; color: var(--ink-soft); margin: 0 0 8px; }
+.card-body .meta { font-size: 13px; color: var(--ink-soft); margin: 0 0 9px; }
 .tag {
   display: inline-flex;
   align-items: center;
-  font-size: 11.5px;
+  font-size: 12px;
   font-weight: 500;
-  padding: 3px 10px;
+  padding: 3px 11px;
   border-radius: 20px;
 }
 .card-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; }
-.count-text { font-size: 12px; color: var(--ink-faint); }
+.count-text { font-size: 12.5px; color: var(--ink-faint); }
 
 /* ---------- Series detail ---------- */
 .series-header {
@@ -406,12 +406,12 @@ const CSS = `
 .volume-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 18px;
+  gap: 24px;
 }
-.volume-card { width: 104px; }
+.volume-card { width: 128px; }
 .volume-face {
   position: relative;
-  height: 142px;
+  height: 176px;
   border-radius: 12px;
   border: 1px solid var(--border);
   display: flex;
@@ -432,7 +432,7 @@ const CSS = `
 .volume-number-text {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 19px;
+  font-size: 22px;
   position: relative;
   z-index: 1;
 }
@@ -441,15 +441,15 @@ const CSS = `
   bottom: 8px; left: 8px;
   background: rgba(255,255,255,0.88);
   color: var(--ink);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  padding: 2px 8px;
+  padding: 3px 9px;
   border-radius: 20px;
 }
 .volume-del {
   position: absolute;
   top: 7px; right: 7px;
-  width: 21px; height: 21px;
+  width: 22px; height: 22px;
   border-radius: 50%;
   border: none;
   background: rgba(255,255,255,0.9);
@@ -462,18 +462,18 @@ const CSS = `
 .volume-card:hover .volume-del { display: flex; }
 .volume-del.confirming { display: flex; background: #F0DEDC; color: #8C4A43; }
 .read-toggle {
-  margin-top: 8px;
+  margin-top: 9px;
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--ink-faint);
   background: transparent;
   border: none;
   padding: 0;
 }
 .read-toggle .box {
-  width: 15px; height: 15px;
+  width: 16px; height: 16px;
   border-radius: 5px;
   border: 1px solid var(--border);
   display: flex; align-items: center; justify-content: center;
@@ -562,9 +562,32 @@ const CSS = `
 .btn-save:disabled { opacity: 0.35; cursor: not-allowed; }
 
 @media (max-width: 640px) {
-  .bs-root { padding: 28px 18px 60px; }
-  .collection-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 14px; }
-  .series-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  .bs-root { padding: 24px 14px 56px; }
+
+  .home-header h1 { font-size: 24px; }
+  .home-header p { font-size: 13px; }
+
+  .collection-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .collection-card { padding: 12px; border-radius: 12px; }
+  .collection-icon { width: 36px; height: 36px; font-size: 15px; border-radius: 9px; margin-bottom: 16px; }
+  .collection-name { font-size: 13px; }
+  .collection-count { font-size: 11px; }
+
+  .series-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .cover { height: 108px; padding: 6px; }
+  .cover-title { font-size: 10.5px; }
+  .card-body { padding: 8px 8px 10px; }
+  .card-body h3 { font-size: 11.5px; }
+  .card-body .meta { font-size: 10px; margin-bottom: 6px; }
+  .tag { font-size: 9.5px; padding: 2px 7px; }
+  .count-text { font-size: 10px; }
+
+  .volume-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .volume-card { width: 100%; }
+  .volume-face { height: 108px; border-radius: 9px; }
+  .volume-number-text { font-size: 15px; }
+  .volume-number-label { font-size: 9.5px; padding: 2px 6px; bottom: 5px; left: 5px; }
+  .read-toggle { font-size: 10.5px; }
 }
 `;
 
