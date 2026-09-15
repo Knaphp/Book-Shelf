@@ -1,11 +1,21 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { Plus, Search, X, ArrowLeft, Trash2, Pencil, BookOpen, Check } from "lucide-react";
+import { Plus, Search, X, ArrowLeft, Trash2, Pencil, BookOpen, Check, Smartphone, Copy } from "lucide-react";
+import { db } from "./firebase.js";
+import { doc, setDoc, getDoc, onSnapshot } from "firebase/firestore";
 
 /* ---------------------------------------------------------------------- */
 /* Config                                                                  */
 /* ---------------------------------------------------------------------- */
 
 const STORAGE_KEY = "bookshelf:data";
+const CODE_KEY = "bookshelf:syncCode";
+
+function makeCode() {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no confusing chars (0/O, 1/I)
+  let out = "";
+  for (let i = 0; i < 6; i++) out += chars[Math.floor(Math.random() * chars.length)];
+  return out;
+}
 
 const PALETTE = [
   { bg: "#DCE8DF", fg: "#4F6D58", name: "เซจ" },
@@ -113,6 +123,14 @@ const CSS = `
   color: var(--ink);
 }
 .home-header p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+.sync-banner {
+  background: #F0DEDC;
+  color: #8C4A43;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  margin-bottom: 20px;
+}
 
 .btn-primary {
   display: inline-flex;
@@ -611,24 +629,75 @@ export default function App() {
   const [editingSeries, setEditingSeries] = useState(null);
   const [showVolumeModal, setShowVolumeModal] = useState(false);
 
+  const [syncCode, setSyncCode] = useState(null);
+  const [syncError, setSyncError] = useState(null);
+  const [showSyncModal, setShowSyncModal] = useState(false);
+
+  // ---- get / create this device's sync code ----
   useEffect(() => {
-    let initial = null;
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) initial = JSON.parse(raw);
-    } catch (e) {
-      initial = null;
+    let code = null;
+    try { code = localStorage.getItem(CODE_KEY); } catch (e) {}
+    if (!code) {
+      code = makeCode();
+      try { localStorage.setItem(CODE_KEY, code); } catch (e) {}
     }
-    if (!initial) {
-      initial = seedData();
-      try { localStorage.setItem(STORAGE_KEY, JSON.stringify(initial)); } catch (e) {}
-    }
-    setData(initial);
-    setLoading(false);
+    setSyncCode(code);
   }, []);
+
+  // ---- subscribe to Firestore for this sync code ----
+  useEffect(() => {
+    if (!syncCode) return;
+    setLoading(true);
+    setSyncError(null);
+    const ref = doc(db, "bookshelves", syncCode);
+    const unsub = onSnapshot(
+      ref,
+      (snap) => {
+        if (snap.exists()) {
+          const remote = snap.data();
+          setData(remote);
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(remote)); } catch (e) {}
+        } else {
+          let initial = null;
+          try {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) initial = JSON.parse(raw);
+          } catch (e) {}
+          if (!initial) initial = seedData();
+          setDoc(ref, initial).catch(() => {});
+          setData(initial);
+        }
+        setLoading(false);
+      },
+      (err) => {
+        console.error(err);
+        setSyncError("เชื่อมต่อฐานข้อมูลไม่ได้ — ใช้ข้อมูลในเครื่องนี้ไปก่อน");
+        let initial = null;
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) initial = JSON.parse(raw);
+        } catch (e) {}
+        setData(initial || seedData());
+        setLoading(false);
+      }
+    );
+    return () => unsub();
+  }, [syncCode]);
 
   const persist = useCallback((next) => {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch (e) {}
+    if (!syncCode) return;
+    setDoc(doc(db, "bookshelves", syncCode), next).catch((e) => {
+      console.error(e);
+      setSyncError("บันทึกขึ้นฐานข้อมูลไม่ได้ — ตรวจสอบการเชื่อมต่อ");
+    });
+  }, [syncCode]);
+
+  const changeSyncCode = useCallback((newCode) => {
+    const cleaned = newCode.trim().toUpperCase();
+    if (!cleaned) return;
+    try { localStorage.setItem(CODE_KEY, cleaned); } catch (e) {}
+    setSyncCode(cleaned);
   }, []);
 
   const update = useCallback((updater) => {
@@ -721,6 +790,8 @@ export default function App() {
           onOpen={(id) => setView({ type: "collection", id })}
           onAdd={() => setShowAddCollection(true)}
           onDelete={deleteCollection}
+          syncError={syncError}
+          onOpenSync={() => setShowSyncModal(true)}
         />
       )}
 
@@ -761,6 +832,14 @@ export default function App() {
         <AddCollectionModal onClose={() => setShowAddCollection(false)} onSave={(name, colorIndex) => { addCollection(name, colorIndex); setShowAddCollection(false); }} />
       )}
 
+      {showSyncModal && (
+        <SyncModal
+          code={syncCode}
+          onClose={() => setShowSyncModal(false)}
+          onConnect={(newCode) => { changeSyncCode(newCode); setShowSyncModal(false); }}
+        />
+      )}
+
       {showSeriesModal && (
         <SeriesModal
           initial={editingSeries}
@@ -789,7 +868,7 @@ export default function App() {
 /* Home                                                                    */
 /* ---------------------------------------------------------------------- */
 
-function HomeView({ data, collectionVolumeCount, onOpen, onAdd, onDelete }) {
+function HomeView({ data, collectionVolumeCount, onOpen, onAdd, onDelete, syncError, onOpenSync }) {
   const [confirmingId, trigger] = useConfirmDelete(onDelete);
   return (
     <div className="home">
@@ -798,8 +877,13 @@ function HomeView({ data, collectionVolumeCount, onOpen, onAdd, onDelete }) {
           <h1>ชั้นหนังสือของฉัน</h1>
           <p>จัดเก็บและติดตามการอ่านของคุณ</p>
         </div>
-        <button className="btn-primary" onClick={onAdd}><Plus size={16} /> ชั้นใหม่</button>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button className="btn-outline" onClick={onOpenSync}><Smartphone size={15} /> ซิงค์อุปกรณ์</button>
+          <button className="btn-primary" onClick={onAdd}><Plus size={16} /> ชั้นใหม่</button>
+        </div>
       </div>
+
+      {syncError && <div className="sync-banner">{syncError}</div>}
 
       {data.collections.length === 0 ? (
         <div className="empty-state">
@@ -960,6 +1044,50 @@ function SeriesView({ series, volumes, onBack, onEdit, onDelete, onSetStatus, on
 /* ---------------------------------------------------------------------- */
 /* Modals                                                                   */
 /* ---------------------------------------------------------------------- */
+
+function SyncModal({ code, onClose, onConnect }) {
+  const [inputCode, setInputCode] = useState("");
+  const [copied, setCopied] = useState(false);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
+    } catch (e) {}
+  };
+
+  return (
+    <Modal title="ซิงค์ข้ามอุปกรณ์" onClose={onClose}>
+      <p style={{ fontSize: 13, color: "var(--ink-soft)", marginTop: 0 }}>
+        พิมพ์รหัสเดียวกันนี้ในอุปกรณ์อีกเครื่อง เพื่อให้ข้อมูลซิงค์กันแบบเรียลไทม์
+      </p>
+      <div className="field">
+        <label>รหัสซิงค์ของเครื่องนี้</label>
+        <div style={{ display: "flex", gap: 8 }}>
+          <input value={code || ""} readOnly style={{ fontFamily: "monospace", fontSize: 18, letterSpacing: 2, textAlign: "center" }} />
+          <button className="btn-outline" onClick={copy} style={{ flexShrink: 0 }}>
+            <Copy size={14} /> {copied ? "คัดลอกแล้ว" : "คัดลอก"}
+          </button>
+        </div>
+      </div>
+      <div className="field" style={{ marginTop: 20 }}>
+        <label>เชื่อมกับรหัสอื่น (พิมพ์รหัสจากอีกเครื่อง)</label>
+        <input
+          value={inputCode}
+          onChange={(e) => setInputCode(e.target.value.toUpperCase())}
+          placeholder="เช่น A3F9K2"
+          maxLength={6}
+          style={{ fontFamily: "monospace", fontSize: 16, letterSpacing: 2, textAlign: "center" }}
+        />
+      </div>
+      <div className="modal-actions">
+        <button className="btn-cancel" onClick={onClose}>ปิด</button>
+        <button className="btn-save" disabled={!inputCode.trim()} onClick={() => onConnect(inputCode)}>เชื่อมต่อ</button>
+      </div>
+    </Modal>
+  );
+}
 
 function AddCollectionModal({ onClose, onSave }) {
   const [name, setName] = useState("");
