@@ -879,6 +879,9 @@ export default function App() {
   const setSeriesType = (id, type) => {
     update((prev) => ({ ...prev, series: prev.series.map((s) => s.id === id ? { ...s, type } : s) }));
   };
+  const touchSeries = (id) => {
+    update((prev) => ({ ...prev, series: prev.series.map((s) => s.id === id ? { ...s, lastOpened: Date.now() } : s) }));
+  };
 
   const addVolume = (seriesId, form) => {
     update((prev) => ({
@@ -919,7 +922,7 @@ export default function App() {
           search={search}
           setSearch={setSearch}
           onBack={() => { setView({ type: "home" }); setSearch(""); }}
-          onOpenSeries={(id) => setView({ type: "series", id })}
+          onOpenSeries={(id) => { touchSeries(id); setView({ type: "series", id }); }}
           onAddSeries={() => { setEditingSeries(null); setShowSeriesModal(true); }}
           onDeleteSeries={deleteSeries}
         />
@@ -1049,7 +1052,9 @@ function HomeView({ data, collectionVolumeCount, onOpen, onAdd, onEdit, onDelete
 function CollectionView({ collection, seriesList, volumeCount, volumesDesc, search, setSearch, onBack, onOpenSeries, onAddSeries, onDeleteSeries }) {
   const [confirmingId, trigger] = useConfirmDelete(onDeleteSeries);
   if (!collection) return null;
-  const filtered = seriesList.filter((s) => s.title.toLowerCase().includes(search.toLowerCase()));
+  const filtered = seriesList
+    .filter((s) => s.title.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => (b.lastOpened || 0) - (a.lastOpened || 0));
 
   return (
     <div>
