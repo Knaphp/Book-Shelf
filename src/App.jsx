@@ -376,9 +376,11 @@ html, body { background: #FAF9F6; margin: 0; }
   border-radius: 14px;
   background: var(--surface-soft);
   border: 1px solid var(--border);
+  overflow: hidden;
 }
 .stack-layer.stack-1 { transform: translate(6px, 7px); z-index: 1; }
-.stack-layer.stack-2 { transform: translate(12px, 14px); z-index: 0; opacity: 0.7; }
+.stack-layer.stack-2 { transform: translate(12px, 14px); z-index: 0; opacity: 0.85; }
+.stack-img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .series-card {
   position: relative;
   z-index: 2;
@@ -722,6 +724,10 @@ export default function App() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState({ type: "home" });
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [view]);
   const [search, setSearch] = useState("");
 
   const [showAddCollection, setShowAddCollection] = useState(false);
@@ -819,6 +825,7 @@ export default function App() {
   }
 
   const volumeCount = (seriesId) => data.volumes.filter((v) => v.seriesId === seriesId).length;
+  const volumesDesc = (seriesId) => data.volumes.filter((v) => v.seriesId === seriesId).sort((a, b) => b.number - a.number);
   const collectionVolumeCount = (collectionId) =>
     data.series.filter((s) => s.collectionId === collectionId)
       .reduce((sum, s) => sum + volumeCount(s.id), 0);
@@ -908,6 +915,7 @@ export default function App() {
           collection={data.collections.find((c) => c.id === view.id)}
           seriesList={data.series.filter((s) => s.collectionId === view.id)}
           volumeCount={volumeCount}
+          volumesDesc={volumesDesc}
           search={search}
           setSearch={setSearch}
           onBack={() => { setView({ type: "home" }); setSearch(""); }}
@@ -1038,7 +1046,7 @@ function HomeView({ data, collectionVolumeCount, onOpen, onAdd, onEdit, onDelete
 /* Collection                                                              */
 /* ---------------------------------------------------------------------- */
 
-function CollectionView({ collection, seriesList, volumeCount, search, setSearch, onBack, onOpenSeries, onAddSeries, onDeleteSeries }) {
+function CollectionView({ collection, seriesList, volumeCount, volumesDesc, search, setSearch, onBack, onOpenSeries, onAddSeries, onDeleteSeries }) {
   const [confirmingId, trigger] = useConfirmDelete(onDeleteSeries);
   if (!collection) return null;
   const filtered = seriesList.filter((s) => s.title.toLowerCase().includes(search.toLowerCase()));
@@ -1066,14 +1074,29 @@ function CollectionView({ collection, seriesList, volumeCount, search, setSearch
           {filtered.map((s) => {
             const tp = typeOf(s.type);
             const tone = hashTone(s.title);
-            const vc = volumeCount(s.id);
+            const vols = volumesDesc(s.id); // sorted newest volume first
+            const vc = vols.length;
+            const latest = vols[0];
+            const coverSrc = latest?.coverUrl || s.coverUrl || "";
+            const second = vols[1];
+            const third = vols[2];
+            const toneA = hashTone(s.title + "b");
+            const toneB = hashTone(s.title + "c");
             return (
               <div className={`series-card-wrap${vc > 1 ? " stacked" : ""}`} key={s.id} onClick={() => onOpenSeries(s.id)} title={s.title}>
-                {vc > 1 && <div className="stack-layer stack-2" />}
-                {vc > 1 && <div className="stack-layer stack-1" />}
+                {vc > 1 && (
+                  <div className="stack-layer stack-2" style={{ background: toneB.bg }}>
+                    {third?.coverUrl && <img src={third.coverUrl} alt="" className="stack-img" />}
+                  </div>
+                )}
+                {vc > 1 && (
+                  <div className="stack-layer stack-1" style={{ background: toneA.bg }}>
+                    {second?.coverUrl && <img src={second.coverUrl} alt="" className="stack-img" />}
+                  </div>
+                )}
                 <div className="series-card">
                   <div className="cover" style={{ background: tone.bg, color: tone.fg }}>
-                    <Cover src={s.coverUrl} imgAlt={s.title} imgClassName="cover-img" fallback={<span className="cover-title">{s.title}</span>} />
+                    <Cover src={coverSrc} imgAlt={s.title} imgClassName="cover-img" fallback={<span className="cover-title">{s.title}</span>} />
                     <span className="type-pill" style={{ background: tp.bg, color: tp.fg }}>{tp.label}</span>
                     <button className={`card-del${confirmingId === s.id ? " confirming" : ""}`} title="ลบเรื่องนี้" onClick={(e) => trigger(s.id, e)}>
                       {confirmingId === s.id ? <Check size={12} /> : <X size={12} />}
