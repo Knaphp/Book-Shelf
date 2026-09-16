@@ -433,6 +433,26 @@ html, body { background: #FAF9F6; margin: 0; }
 }
 
 /* ---------- Series detail ---------- */
+.series-toolbar {
+  position: sticky;
+  top: 12px;
+  z-index: 30;
+  background: var(--ink);
+  border-radius: 18px;
+  padding: 18px 22px 16px;
+  margin-bottom: 30px;
+  box-shadow: 0 14px 30px -12px rgba(20,16,10,0.45);
+}
+.series-toolbar .back-btn { color: rgba(255,255,255,0.55); }
+.series-toolbar .back-btn:hover { color: #fff; }
+.series-toolbar .series-header h2 { color: #fff; }
+.series-toolbar .series-header .meta { color: rgba(255,255,255,0.5); }
+.series-toolbar .icon-btn { border-color: rgba(255,255,255,0.2); color: rgba(255,255,255,0.75); }
+.series-toolbar .icon-btn:hover { border-color: #fff; color: #fff; }
+.series-toolbar .status-row { border-bottom: none; padding-bottom: 0; margin-bottom: 0; }
+.series-toolbar .status-pill { border-color: rgba(255,255,255,0.25); color: rgba(255,255,255,0.8); }
+.series-toolbar .status-pill:not(.active):hover { border-color: #fff; color: #fff; }
+.series-toolbar .btn-primary { background: #fff; color: var(--ink); }
 .series-header {
   display: flex;
   justify-content: space-between;
@@ -1127,33 +1147,35 @@ function SeriesView({ series, volumes, onBack, onEdit, onDelete, onSetType, onAd
 
   return (
     <div>
-      <button className="back-btn" onClick={onBack}><ArrowLeft size={15} /> กลับไปที่ชั้น</button>
+      <div className="series-toolbar">
+        <button className="back-btn" onClick={onBack}><ArrowLeft size={15} /> กลับไปที่ชั้น</button>
 
-      <div className="series-header">
-        <div>
-          <h2>{series.title}</h2>
-          <p className="meta">{series.publisher || "ไม่ระบุสำนักพิมพ์"}{series.genre ? ` · ${series.genre}` : ""}</p>
+        <div className="series-header">
+          <div>
+            <h2>{series.title}</h2>
+            <p className="meta">{series.publisher || "ไม่ระบุสำนักพิมพ์"}{series.genre ? ` · ${series.genre}` : ""}</p>
+          </div>
+          <div className="header-actions">
+            <button className="icon-btn" title="แก้ไข" onClick={onEdit}><Pencil size={15} /></button>
+            <button className={`icon-btn danger${confirmingDeleteSeries === series.id ? " confirming" : ""}`} title="ลบเรื่องนี้" onClick={(e) => triggerDeleteSeries(series.id, e)}>
+              {confirmingDeleteSeries === series.id ? <Check size={15} /> : <Trash2 size={15} />}
+            </button>
+          </div>
         </div>
-        <div className="header-actions">
-          <button className="icon-btn" title="แก้ไข" onClick={onEdit}><Pencil size={15} /></button>
-          <button className={`icon-btn danger${confirmingDeleteSeries === series.id ? " confirming" : ""}`} title="ลบเรื่องนี้" onClick={(e) => triggerDeleteSeries(series.id, e)}>
-            {confirmingDeleteSeries === series.id ? <Check size={15} /> : <Trash2 size={15} />}
-          </button>
-        </div>
-      </div>
 
-      <div className="status-row">
-        {TYPES.map((tp) => (
-          <button
-            key={tp.key}
-            className={`status-pill${series.type === tp.key ? " active" : ""}`}
-            style={series.type === tp.key ? { background: tp.bg, color: tp.fg } : {}}
-            onClick={() => onSetType(tp.key)}
-          >
-            {tp.label}
-          </button>
-        ))}
-        <button className="btn-primary small" onClick={onAddVolume}><Plus size={14} /> เพิ่มเล่ม</button>
+        <div className="status-row">
+          {TYPES.map((tp) => (
+            <button
+              key={tp.key}
+              className={`status-pill${series.type === tp.key ? " active" : ""}`}
+              style={series.type === tp.key ? { background: tp.bg, color: tp.fg } : {}}
+              onClick={() => onSetType(tp.key)}
+            >
+              {tp.label}
+            </button>
+          ))}
+          <button className="btn-primary small" onClick={onAddVolume}><Plus size={14} /> เพิ่มเล่ม</button>
+        </div>
       </div>
 
       {volumes.length === 0 ? (
