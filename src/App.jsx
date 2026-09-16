@@ -483,14 +483,14 @@ html, body { background: #FAF9F6; margin: 0; }
 .status-pill.active { border-color: transparent; font-weight: 600; }
 
 .volume-grid {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 30px 28px;
 }
-.volume-card { width: 128px; }
+.volume-card { width: auto; }
 .volume-face {
   position: relative;
-  height: 176px;
+  aspect-ratio: 2 / 3;
   border-radius: 12px;
   border: 1px solid var(--border);
   display: flex;
@@ -659,9 +659,9 @@ html, body { background: #FAF9F6; margin: 0; }
   .stack-layer.stack-1 { transform: translate(3px, 4px); }
   .stack-layer.stack-2 { transform: translate(6px, 8px); }
 
-  .volume-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .volume-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
   .volume-card { width: 100%; }
-  .volume-face { height: 108px; border-radius: 9px; }
+  .volume-face { border-radius: 9px; }
   .volume-number-text { font-size: 15px; }
   .volume-number-label { font-size: 9.5px; padding: 2px 6px; bottom: 5px; left: 5px; }
   .read-toggle { font-size: 10.5px; }
