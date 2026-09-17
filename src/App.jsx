@@ -1031,12 +1031,6 @@ export default function App() {
             onBack={() => setView({ type: "collection", id: s.collectionId })}
             title={s.title}
             meta={s.genre || ""}
-            actions={
-              <>
-                <button className="icon-btn" title="แก้ไข" onClick={() => { setEditingSeries(s); setShowSeriesModal(true); }}><Pencil size={15} /></button>
-                <DeleteSeriesButton seriesId={s.id} onDelete={deleteSeries} />
-              </>
-            }
             secondary={
               <>
                 <div className="topbar-secondary-group">
@@ -1051,7 +1045,11 @@ export default function App() {
                     </button>
                   ))}
                 </div>
-                <button className="btn-primary" onClick={() => setShowVolumeModal(true)}><Plus size={15} /> เพิ่มเล่ม</button>
+                <div className="topbar-secondary-group">
+                  <button className="icon-btn" title="แก้ไข" onClick={() => { setEditingSeries(s); setShowSeriesModal(true); }}><Pencil size={15} /></button>
+                  <DeleteSeriesButton seriesId={s.id} onDelete={deleteSeries} />
+                  <button className="btn-primary" onClick={() => setShowVolumeModal(true)}><Plus size={15} /> เพิ่มเล่ม</button>
+                </div>
               </>
             }
           />
