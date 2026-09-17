@@ -1008,14 +1008,14 @@ export default function App() {
             onBack={() => { setView({ type: "home" }); setSearch(""); }}
             title={collection.name}
             meta={`${seriesInCollection.length} เรื่อง`}
-            actions={
-              <button className="btn-primary" onClick={() => { setEditingSeries(null); setShowSeriesModal(true); }}><Plus size={15} /> เพิ่มหนังสือ</button>
-            }
             secondary={
-              <div className="search-box">
-                <Search size={15} />
-                <input placeholder="ค้นหาชื่อเรื่อง..." value={search} onChange={(e) => setSearch(e.target.value)} />
-              </div>
+              <>
+                <div className="search-box">
+                  <Search size={15} />
+                  <input placeholder="ค้นหาชื่อเรื่อง..." value={search} onChange={(e) => setSearch(e.target.value)} />
+                </div>
+                <button className="btn-primary" onClick={() => { setEditingSeries(null); setShowSeriesModal(true); }}><Plus size={15} /> เพิ่มหนังสือ</button>
+              </>
             }
           />
         );
@@ -1028,7 +1028,7 @@ export default function App() {
           <TopBar
             onBack={() => setView({ type: "collection", id: s.collectionId })}
             title={s.title}
-            meta={`${s.publisher || "ไม่ระบุสำนักพิมพ์"}${s.genre ? ` · ${s.genre}` : ""}`}
+            meta={s.genre || ""}
             actions={
               <>
                 <button className="icon-btn" title="แก้ไข" onClick={() => { setEditingSeries(s); setShowSeriesModal(true); }}><Pencil size={15} /></button>
