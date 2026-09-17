@@ -145,10 +145,12 @@ html, body { background: var(--bg); margin: 0; }
 .topbar-secondary {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
   flex-wrap: wrap;
   margin-top: 16px;
 }
+.topbar-secondary-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .topbar .search-box { background: var(--surface); max-width: 320px; }
 
 .bs-root {
@@ -1033,21 +1035,23 @@ export default function App() {
               <>
                 <button className="icon-btn" title="แก้ไข" onClick={() => { setEditingSeries(s); setShowSeriesModal(true); }}><Pencil size={15} /></button>
                 <DeleteSeriesButton seriesId={s.id} onDelete={deleteSeries} />
-                <button className="btn-primary" onClick={() => setShowVolumeModal(true)}><Plus size={15} /> เพิ่มเล่ม</button>
               </>
             }
             secondary={
               <>
-                {TYPES.map((tp) => (
-                  <button
-                    key={tp.key}
-                    className={`status-pill${s.type === tp.key ? " active" : ""}`}
-                    style={s.type === tp.key ? { background: tp.bg, color: tp.fg } : {}}
-                    onClick={() => setSeriesType(s.id, tp.key)}
-                  >
-                    {tp.label}
-                  </button>
-                ))}
+                <div className="topbar-secondary-group">
+                  {TYPES.map((tp) => (
+                    <button
+                      key={tp.key}
+                      className={`status-pill${s.type === tp.key ? " active" : ""}`}
+                      style={s.type === tp.key ? { background: tp.bg, color: tp.fg } : {}}
+                      onClick={() => setSeriesType(s.id, tp.key)}
+                    >
+                      {tp.label}
+                    </button>
+                  ))}
+                </div>
+                <button className="btn-primary" onClick={() => setShowVolumeModal(true)}><Plus size={15} /> เพิ่มเล่ม</button>
               </>
             }
           />
