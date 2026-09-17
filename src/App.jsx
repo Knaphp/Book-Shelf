@@ -77,9 +77,7 @@ function seedData() {
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap');
 
-html, body { background: #FAF9F6; margin: 0; }
-
-.bs-root {
+:root {
   --bg: #FAF9F6;
   --surface: #FFFFFF;
   --surface-soft: #F2F1EC;
@@ -92,7 +90,68 @@ html, body { background: #FAF9F6; margin: 0; }
   --accent-ink: #4F6D58;
   --font-display: 'Inter', 'Noto Sans Thai', sans-serif;
   --font-body: 'Inter', 'Noto Sans Thai', sans-serif;
+}
 
+html, body { background: var(--bg); margin: 0; }
+
+/* ---------- Global top bar (spans full width, every page) ---------- */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: #DAD7CD;
+  box-shadow: 0 2px 0 rgba(46,45,40,0.06);
+}
+.topbar-inner {
+  max-width: 1420px;
+  margin: 0 auto;
+  padding: 22px 32px;
+  box-sizing: border-box;
+}
+.topbar-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.topbar-title-line { display: flex; align-items: baseline; gap: 14px; min-width: 0; }
+.topbar-back {
+  width: 34px; height: 34px;
+  border-radius: 10px;
+  border: 1px solid rgba(46,45,40,0.18);
+  background: transparent;
+  color: var(--ink-soft);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  align-self: center;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.topbar-back:hover { border-color: var(--ink); color: var(--ink); }
+.topbar-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 24px;
+  color: var(--ink);
+  line-height: 1.3;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.topbar-meta { font-size: 14px; color: var(--ink-soft); font-weight: 500; white-space: nowrap; }
+.topbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; flex-shrink: 0; }
+.topbar-secondary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+.topbar .search-box { background: var(--surface); max-width: 320px; }
+
+.bs-root {
   min-height: 100vh;
   background: var(--bg);
   color: var(--ink);
@@ -105,6 +164,8 @@ html, body { background: #FAF9F6; margin: 0; }
 .bs-root * { box-sizing: border-box; }
 .bs-root button { font-family: inherit; cursor: pointer; }
 .bs-root input { font-family: inherit; }
+.topbar button { font-family: inherit; cursor: pointer; }
+.topbar input { font-family: inherit; }
 
 .muted { color: var(--ink-soft); }
 
@@ -664,6 +725,11 @@ html, body { background: #FAF9F6; margin: 0; }
 
 @media (max-width: 640px) {
   .bs-root { padding: 14px 10px 40px; max-width: none; }
+  .topbar-inner { padding: 14px 14px; max-width: none; }
+  .topbar-title { font-size: 17px; }
+  .topbar-meta { font-size: 12px; }
+  .topbar-back { width: 30px; height: 30px; }
+  .topbar .search-box { max-width: none; }
 
   .home-header h1 { font-size: 24px; }
   .home-header p { font-size: 13px; }
@@ -917,98 +983,189 @@ export default function App() {
   };
 
   return (
-    <div className="bs-root">
+    <>
       <style>{CSS}</style>
 
       {view.type === "home" && (
-        <HomeView
-          data={data}
-          collectionVolumeCount={collectionVolumeCount}
-          onOpen={(id) => setView({ type: "collection", id })}
-          onAdd={() => { setEditingCollection(null); setShowAddCollection(true); }}
-          onEdit={(c) => { setEditingCollection(c); setShowAddCollection(true); }}
-          onDelete={deleteCollection}
-          syncError={syncError}
-          onOpenSync={() => setShowSyncModal(true)}
+        <TopBar
+          title="ชั้นหนังสือของฉัน"
+          meta="จัดเก็บและติดตามการอ่านของคุณ"
+          actions={
+            <>
+              <button className="btn-outline" onClick={() => setShowSyncModal(true)}><Smartphone size={15} /> ซิงค์อุปกรณ์</button>
+              <button className="btn-primary" onClick={() => { setEditingCollection(null); setShowAddCollection(true); }}><Plus size={16} /> ชั้นใหม่</button>
+            </>
+          }
         />
       )}
 
-      {view.type === "collection" && (
-        <CollectionView
-          collection={data.collections.find((c) => c.id === view.id)}
-          seriesList={data.series.filter((s) => s.collectionId === view.id)}
-          volumeCount={volumeCount}
-          volumesDesc={volumesDesc}
-          search={search}
-          setSearch={setSearch}
-          onBack={() => { setView({ type: "home" }); setSearch(""); }}
-          onOpenSeries={(id) => { touchSeries(id); setView({ type: "series", id }); }}
-          onAddSeries={() => { setEditingSeries(null); setShowSeriesModal(true); }}
-          onDeleteSeries={deleteSeries}
-        />
-      )}
-
-      {view.type === "series" && (() => {
-        const s = data.series.find((x) => x.id === view.id);
-        if (!s) return null;
-        const vols = data.volumes.filter((v) => v.seriesId === s.id).sort((a, b) => a.number - b.number);
+      {view.type === "collection" && (() => {
+        const collection = data.collections.find((c) => c.id === view.id);
+        if (!collection) return null;
+        const seriesInCollection = data.series.filter((s) => s.collectionId === view.id);
         return (
-          <SeriesView
-            series={s}
-            volumes={vols}
-            onBack={() => setView({ type: "collection", id: s.collectionId })}
-            onEdit={() => { setEditingSeries(s); setShowSeriesModal(true); }}
-            onDelete={() => deleteSeries(s.id)}
-            onSetType={(type) => setSeriesType(s.id, type)}
-            onAddVolume={() => setShowVolumeModal(true)}
-            onDeleteVolume={deleteVolume}
-            onToggleRead={toggleVolumeRead}
+          <TopBar
+            onBack={() => { setView({ type: "home" }); setSearch(""); }}
+            title={collection.name}
+            meta={`${seriesInCollection.length} เรื่อง`}
+            actions={
+              <button className="btn-primary" onClick={() => { setEditingSeries(null); setShowSeriesModal(true); }}><Plus size={15} /> เพิ่มหนังสือ</button>
+            }
+            secondary={
+              <div className="search-box">
+                <Search size={15} />
+                <input placeholder="ค้นหาชื่อเรื่อง..." value={search} onChange={(e) => setSearch(e.target.value)} />
+              </div>
+            }
           />
         );
       })()}
 
-      {showAddCollection && (
-        <AddCollectionModal
-          initial={editingCollection}
-          onClose={() => { setShowAddCollection(false); setEditingCollection(null); }}
-          onSave={(name, colorIndex, iconUrl) => {
-            if (editingCollection) editCollection(editingCollection.id, name, colorIndex, iconUrl);
-            else addCollection(name, colorIndex, iconUrl);
-            setShowAddCollection(false);
-            setEditingCollection(null);
-          }}
-        />
-      )}
+      {view.type === "series" && (() => {
+        const s = data.series.find((x) => x.id === view.id);
+        if (!s) return null;
+        return (
+          <TopBar
+            onBack={() => setView({ type: "collection", id: s.collectionId })}
+            title={s.title}
+            meta={`${s.publisher || "ไม่ระบุสำนักพิมพ์"}${s.genre ? ` · ${s.genre}` : ""}`}
+            actions={
+              <>
+                <button className="icon-btn" title="แก้ไข" onClick={() => { setEditingSeries(s); setShowSeriesModal(true); }}><Pencil size={15} /></button>
+                <DeleteSeriesButton seriesId={s.id} onDelete={deleteSeries} />
+                <button className="btn-primary" onClick={() => setShowVolumeModal(true)}><Plus size={15} /> เพิ่มเล่ม</button>
+              </>
+            }
+            secondary={
+              <>
+                {TYPES.map((tp) => (
+                  <button
+                    key={tp.key}
+                    className={`status-pill${s.type === tp.key ? " active" : ""}`}
+                    style={s.type === tp.key ? { background: tp.bg, color: tp.fg } : {}}
+                    onClick={() => setSeriesType(s.id, tp.key)}
+                  >
+                    {tp.label}
+                  </button>
+                ))}
+              </>
+            }
+          />
+        );
+      })()}
 
-      {showSyncModal && (
-        <SyncModal
-          code={syncCode}
-          onClose={() => setShowSyncModal(false)}
-          onConnect={(newCode) => { changeSyncCode(newCode); setShowSyncModal(false); }}
-        />
-      )}
+      <div className="bs-root">
+        {view.type === "home" && (
+          <HomeView
+            data={data}
+            collectionVolumeCount={collectionVolumeCount}
+            onOpen={(id) => setView({ type: "collection", id })}
+            onEdit={(c) => { setEditingCollection(c); setShowAddCollection(true); }}
+            onDelete={deleteCollection}
+            syncError={syncError}
+          />
+        )}
 
-      {showSeriesModal && (
-        <SeriesModal
-          initial={editingSeries}
-          onClose={() => { setShowSeriesModal(false); setEditingSeries(null); }}
-          onSave={(form) => {
-            if (editingSeries) editSeries(editingSeries.id, form);
-            else addSeries(view.id, form);
-            setShowSeriesModal(false);
-            setEditingSeries(null);
-          }}
-        />
-      )}
+        {view.type === "collection" && (
+          <CollectionView
+            collection={data.collections.find((c) => c.id === view.id)}
+            seriesList={data.series.filter((s) => s.collectionId === view.id)}
+            volumeCount={volumeCount}
+            volumesDesc={volumesDesc}
+            search={search}
+            onOpenSeries={(id) => { touchSeries(id); setView({ type: "series", id }); }}
+            onDeleteSeries={deleteSeries}
+          />
+        )}
 
-      {showVolumeModal && view.type === "series" && (
-        <VolumeModal
-          nextNumber={(data.volumes.filter((v) => v.seriesId === view.id).length || 0) + 1}
-          onClose={() => setShowVolumeModal(false)}
-          onSave={(form) => { addVolume(view.id, form); setShowVolumeModal(false); }}
-        />
-      )}
+        {view.type === "series" && (() => {
+          const s = data.series.find((x) => x.id === view.id);
+          if (!s) return null;
+          const vols = data.volumes.filter((v) => v.seriesId === s.id).sort((a, b) => a.number - b.number);
+          return (
+            <SeriesView
+              series={s}
+              volumes={vols}
+              onDeleteVolume={deleteVolume}
+              onToggleRead={toggleVolumeRead}
+            />
+          );
+        })()}
+
+        {showAddCollection && (
+          <AddCollectionModal
+            initial={editingCollection}
+            onClose={() => { setShowAddCollection(false); setEditingCollection(null); }}
+            onSave={(name, colorIndex, iconUrl) => {
+              if (editingCollection) editCollection(editingCollection.id, name, colorIndex, iconUrl);
+              else addCollection(name, colorIndex, iconUrl);
+              setShowAddCollection(false);
+              setEditingCollection(null);
+            }}
+          />
+        )}
+
+        {showSyncModal && (
+          <SyncModal
+            code={syncCode}
+            onClose={() => setShowSyncModal(false)}
+            onConnect={(newCode) => { changeSyncCode(newCode); setShowSyncModal(false); }}
+          />
+        )}
+
+        {showSeriesModal && (
+          <SeriesModal
+            initial={editingSeries}
+            onClose={() => { setShowSeriesModal(false); setEditingSeries(null); }}
+            onSave={(form) => {
+              if (editingSeries) editSeries(editingSeries.id, form);
+              else addSeries(view.id, form);
+              setShowSeriesModal(false);
+              setEditingSeries(null);
+            }}
+          />
+        )}
+
+        {showVolumeModal && view.type === "series" && (
+          <VolumeModal
+            nextNumber={(data.volumes.filter((v) => v.seriesId === view.id).length || 0) + 1}
+            onClose={() => setShowVolumeModal(false)}
+            onSave={(form) => { addVolume(view.id, form); setShowVolumeModal(false); }}
+          />
+        )}
+      </div>
+    </>
+  );
+}
+
+/* ---------------------------------------------------------------------- */
+/* Top bar (global, full width, sticky, shown on every page)              */
+/* ---------------------------------------------------------------------- */
+
+function TopBar({ onBack, title, meta, actions, secondary }) {
+  return (
+    <div className="topbar">
+      <div className="topbar-inner">
+        <div className="topbar-row">
+          <div className="topbar-title-line">
+            {onBack && <button className="topbar-back" title="กลับ" onClick={onBack}><ArrowLeft size={16} /></button>}
+            <span className="topbar-title">{title}</span>
+            {meta && <span className="topbar-meta">{meta}</span>}
+          </div>
+          {actions && <div className="topbar-actions">{actions}</div>}
+        </div>
+        {secondary && <div className="topbar-secondary">{secondary}</div>}
+      </div>
     </div>
+  );
+}
+
+function DeleteSeriesButton({ seriesId, onDelete }) {
+  const [confirming, trigger] = useConfirmDelete(onDelete);
+  return (
+    <button className={`icon-btn danger${confirming === seriesId ? " confirming" : ""}`} title="ลบเรื่องนี้" onClick={(e) => trigger(seriesId, e)}>
+      {confirming === seriesId ? <Check size={15} /> : <Trash2 size={15} />}
+    </button>
   );
 }
 
@@ -1016,21 +1173,10 @@ export default function App() {
 /* Home                                                                    */
 /* ---------------------------------------------------------------------- */
 
-function HomeView({ data, collectionVolumeCount, onOpen, onAdd, onEdit, onDelete, syncError, onOpenSync }) {
+function HomeView({ data, collectionVolumeCount, onOpen, onEdit, onDelete, syncError }) {
   const [confirmingId, trigger] = useConfirmDelete(onDelete);
   return (
     <div className="home">
-      <div className="home-header">
-        <div>
-          <h1>ชั้นหนังสือของฉัน</h1>
-          <p>จัดเก็บและติดตามการอ่านของคุณ</p>
-        </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <button className="btn-outline" onClick={onOpenSync}><Smartphone size={15} /> ซิงค์อุปกรณ์</button>
-          <button className="btn-primary" onClick={onAdd}><Plus size={16} /> ชั้นใหม่</button>
-        </div>
-      </div>
-
       {syncError && <div className="sync-banner">{syncError}</div>}
 
       {data.collections.length === 0 ? (
@@ -1069,7 +1215,7 @@ function HomeView({ data, collectionVolumeCount, onOpen, onAdd, onEdit, onDelete
 /* Collection                                                              */
 /* ---------------------------------------------------------------------- */
 
-function CollectionView({ collection, seriesList, volumeCount, volumesDesc, search, setSearch, onBack, onOpenSeries, onAddSeries, onDeleteSeries }) {
+function CollectionView({ collection, seriesList, volumeCount, volumesDesc, search, onOpenSeries, onDeleteSeries }) {
   const [confirmingId, trigger] = useConfirmDelete(onDeleteSeries);
   if (!collection) return null;
   const filtered = seriesList
@@ -1078,17 +1224,6 @@ function CollectionView({ collection, seriesList, volumeCount, volumesDesc, sear
 
   return (
     <div>
-      <button className="back-btn" onClick={onBack}><ArrowLeft size={15} /> ชั้นหนังสือ</button>
-      <h2 className="collection-title">{collection.name} <span className="count-tag">{seriesList.length} เรื่อง</span></h2>
-
-      <div className="toolbar">
-        <div className="search-box">
-          <Search size={15} />
-          <input placeholder="ค้นหาชื่อเรื่อง..." value={search} onChange={(e) => setSearch(e.target.value)} />
-        </div>
-        <button className="btn-outline" onClick={onAddSeries}><Plus size={15} /> เพิ่มหนังสือ</button>
-      </div>
-
       {filtered.length === 0 ? (
         <div className="empty-state">
           <h3>{search ? "ไม่พบเรื่องที่ค้นหา" : "ยังไม่มีหนังสือในชั้นนี้"}</h3>
@@ -1141,43 +1276,11 @@ function CollectionView({ collection, seriesList, volumeCount, volumesDesc, sear
 /* Series detail                                                           */
 /* ---------------------------------------------------------------------- */
 
-function SeriesView({ series, volumes, onBack, onEdit, onDelete, onSetType, onAddVolume, onDeleteVolume, onToggleRead }) {
-  const [confirmingDeleteSeries, triggerDeleteSeries] = useConfirmDelete(onDelete);
+function SeriesView({ series, volumes, onDeleteVolume, onToggleRead }) {
   const [confirmingVolId, triggerVol] = useConfirmDelete(onDeleteVolume);
 
   return (
     <div>
-      <div className="series-toolbar">
-        <button className="back-btn" onClick={onBack}><ArrowLeft size={15} /> กลับไปที่ชั้น</button>
-
-        <div className="series-header">
-          <div>
-            <h2>{series.title}</h2>
-            <p className="meta">{series.publisher || "ไม่ระบุสำนักพิมพ์"}{series.genre ? ` · ${series.genre}` : ""}</p>
-          </div>
-          <div className="header-actions">
-            <button className="icon-btn" title="แก้ไข" onClick={onEdit}><Pencil size={15} /></button>
-            <button className={`icon-btn danger${confirmingDeleteSeries === series.id ? " confirming" : ""}`} title="ลบเรื่องนี้" onClick={(e) => triggerDeleteSeries(series.id, e)}>
-              {confirmingDeleteSeries === series.id ? <Check size={15} /> : <Trash2 size={15} />}
-            </button>
-          </div>
-        </div>
-
-        <div className="status-row">
-          {TYPES.map((tp) => (
-            <button
-              key={tp.key}
-              className={`status-pill${series.type === tp.key ? " active" : ""}`}
-              style={series.type === tp.key ? { background: tp.bg, color: tp.fg } : {}}
-              onClick={() => onSetType(tp.key)}
-            >
-              {tp.label}
-            </button>
-          ))}
-          <button className="btn-primary small" onClick={onAddVolume}><Plus size={14} /> เพิ่มเล่ม</button>
-        </div>
-      </div>
-
       {volumes.length === 0 ? (
         <div className="empty-state">
           <h3>ยังไม่มีเล่มในเรื่องนี้</h3>
