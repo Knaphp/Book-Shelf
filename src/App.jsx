@@ -991,7 +991,6 @@ export default function App() {
       {view.type === "home" && (
         <TopBar
           title="ชั้นหนังสือของฉัน"
-          meta="จัดเก็บและติดตามการอ่านของคุณ"
           actions={
             <>
               <button className="btn-outline" onClick={() => setShowSyncModal(true)}><Smartphone size={15} /> ซิงค์อุปกรณ์</button>
