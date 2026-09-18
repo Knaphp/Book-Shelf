@@ -426,8 +426,24 @@ html, body { background: var(--bg); margin: 0; }
 /* ---------- Series grid ---------- */
 .series-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 30px 28px;
+  grid-template-columns: repeat(auto-fill, 200px);
+  justify-content: start;
+  column-gap: 28px;
+  row-gap: 36px;
+  padding-bottom: 36px;
+  background-repeat: repeat-y;
+  background-position: 0 0;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    transparent 300px,
+    #B98A54 300px,
+    #8B5A34 306px,
+    #5E3B1F 316px,
+    rgba(40,25,12,0.35) 316px,
+    rgba(40,25,12,0) 332px,
+    transparent 336px
+  );
 }
 .series-card-wrap {
   position: relative;
@@ -742,7 +758,7 @@ html, body { background: var(--bg); margin: 0; }
   .collection-name { font-size: 13px; }
   .collection-count { font-size: 11px; }
 
-  .series-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .series-grid { grid-template-columns: repeat(4, 1fr); column-gap: 10px; row-gap: 10px; padding-bottom: 0; background-image: none; }
   .cover { padding: 6px; }
   .cover-title { font-size: 9.5px; }
   .type-pill { font-size: 9px; padding: 2px 7px; bottom: 5px; left: 5px; }
