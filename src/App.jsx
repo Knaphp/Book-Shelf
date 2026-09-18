@@ -435,20 +435,11 @@ html, body { background: var(--bg); margin: 0; }
 .shelf-row-cards { display: flex; gap: 28px; }
 .shelf-plank {
   position: relative;
-  height: 18px;
-  margin-top: 12px;
-  border-radius: 9px;
+  height: 22px;
+  margin-top: 10px;
+  border-radius: 7px;
   background: linear-gradient(to bottom, #C79A62 0%, #9C6B3E 45%, #6E4425 100%);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
-}
-.shelf-plank-shadow {
-  position: absolute;
-  left: 22px; right: 22px;
-  top: 100%;
-  height: 13px;
-  margin-top: 2px;
-  border-radius: 50%;
-  background: radial-gradient(ellipse at center, rgba(35,22,10,0.4), transparent 75%);
+  box-shadow: 0 14px 20px -6px rgba(35,22,10,0.45), inset 0 1px 0 rgba(255,255,255,0.25);
 }
 .series-card-wrap {
   position: relative;
@@ -1325,9 +1316,7 @@ function CollectionView({ collection, seriesList, volumeCount, volumesDesc, sear
                     />
                   ))}
                 </div>
-                <div className="shelf-plank" style={{ width: rowWidth }}>
-                  <div className="shelf-plank-shadow" />
-                </div>
+                <div className="shelf-plank" style={{ width: rowWidth }} />
               </div>
             );
           })}
