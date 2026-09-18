@@ -426,24 +426,29 @@ html, body { background: var(--bg); margin: 0; }
 /* ---------- Series grid ---------- */
 .series-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 200px);
-  justify-content: start;
-  column-gap: 28px;
-  row-gap: 36px;
-  padding-bottom: 36px;
-  background-repeat: repeat-y;
-  background-position: 0 0;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    transparent 0px,
-    transparent 300px,
-    #B98A54 300px,
-    #8B5A34 306px,
-    #5E3B1F 316px,
-    rgba(40,25,12,0.35) 316px,
-    rgba(40,25,12,0) 332px,
-    transparent 336px
-  );
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 30px 28px;
+}
+.shelf-rows { display: flex; flex-direction: column; }
+.shelf-row { margin-bottom: 48px; }
+.shelf-row:last-child { margin-bottom: 8px; }
+.shelf-row-cards { display: flex; gap: 28px; }
+.shelf-plank {
+  position: relative;
+  height: 18px;
+  margin-top: 12px;
+  border-radius: 9px;
+  background: linear-gradient(to bottom, #C79A62 0%, #9C6B3E 45%, #6E4425 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.25);
+}
+.shelf-plank-shadow {
+  position: absolute;
+  left: 22px; right: 22px;
+  top: 100%;
+  height: 13px;
+  margin-top: 2px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(35,22,10,0.4), transparent 75%);
 }
 .series-card-wrap {
   position: relative;
@@ -758,7 +763,7 @@ html, body { background: var(--bg); margin: 0; }
   .collection-name { font-size: 13px; }
   .collection-count { font-size: 11px; }
 
-  .series-grid { grid-template-columns: repeat(4, 1fr); column-gap: 10px; row-gap: 10px; padding-bottom: 0; background-image: none; }
+  .series-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
   .cover { padding: 6px; }
   .cover-title { font-size: 9.5px; }
   .type-pill { font-size: 9px; padding: 2px 7px; bottom: 5px; left: 5px; }
@@ -1232,12 +1237,67 @@ function HomeView({ data, collectionVolumeCount, onOpen, onEdit, onDelete, syncE
 /* Collection                                                              */
 /* ---------------------------------------------------------------------- */
 
+function useIsDesktop() {
+  const [isDesktop, setIsDesktop] = useState(() => (typeof window !== "undefined" ? window.innerWidth > 640 : true));
+  useEffect(() => {
+    const onResize = () => setIsDesktop(window.innerWidth > 640);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return isDesktop;
+}
+
+const SHELF_CARD_W = 200;
+const SHELF_GAP = 28;
+
+function SeriesCard({ series: s, volumesDesc, confirmingId, trigger, onOpenSeries, style }) {
+  const tp = typeOf(s.type);
+  const tone = hashTone(s.title);
+  const vols = volumesDesc(s.id); // sorted newest volume first
+  const vc = vols.length;
+  const latest = vols[0];
+  const coverSrc = latest?.coverUrl || s.coverUrl || "";
+  const second = vols[1];
+  const third = vols[2];
+  const toneA = hashTone(s.title + "b");
+  const toneB = hashTone(s.title + "c");
+  return (
+    <div className={`series-card-wrap${vc > 1 ? " stacked" : ""}`} style={style} onClick={() => onOpenSeries(s.id)} title={s.title}>
+      {vc > 1 && (
+        <div className="stack-layer stack-2" style={{ background: toneB.bg }}>
+          {third?.coverUrl && <img src={third.coverUrl} alt="" className="stack-img" />}
+        </div>
+      )}
+      {vc > 1 && (
+        <div className="stack-layer stack-1" style={{ background: toneA.bg }}>
+          {second?.coverUrl && <img src={second.coverUrl} alt="" className="stack-img" />}
+        </div>
+      )}
+      <div className="series-card">
+        <div className="cover" style={{ background: tone.bg, color: tone.fg }}>
+          <Cover src={coverSrc} imgAlt={s.title} imgClassName="cover-img" fallback={<span className="cover-title">{s.title}</span>} />
+          <span className="type-pill" style={{ background: tp.bg, color: tp.fg }}>{tp.label}</span>
+          <button className={`card-del${confirmingId === s.id ? " confirming" : ""}`} title="ลบเรื่องนี้" onClick={(e) => trigger(s.id, e)}>
+            {confirmingId === s.id ? <Check size={12} /> : <X size={12} />}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function CollectionView({ collection, seriesList, volumeCount, volumesDesc, search, onOpenSeries, onDeleteSeries }) {
   const [confirmingId, trigger] = useConfirmDelete(onDeleteSeries);
+  const isDesktop = useIsDesktop();
   if (!collection) return null;
   const filtered = seriesList
     .filter((s) => s.title.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => (b.lastOpened || 0) - (a.lastOpened || 0));
+
+  const rows = [];
+  if (isDesktop) {
+    for (let i = 0; i < filtered.length; i += 6) rows.push(filtered.slice(i, i + 6));
+  }
 
   return (
     <div>
@@ -1246,43 +1306,37 @@ function CollectionView({ collection, seriesList, volumeCount, volumesDesc, sear
           <h3>{search ? "ไม่พบเรื่องที่ค้นหา" : "ยังไม่มีหนังสือในชั้นนี้"}</h3>
           <p>{search ? "ลองค้นหาด้วยคำอื่น" : "กดปุ่ม “เพิ่มหนังสือ” เพื่อเริ่มเก็บเล่มแรก"}</p>
         </div>
-      ) : (
-        <div className="series-grid">
-          {filtered.map((s) => {
-            const tp = typeOf(s.type);
-            const tone = hashTone(s.title);
-            const vols = volumesDesc(s.id); // sorted newest volume first
-            const vc = vols.length;
-            const latest = vols[0];
-            const coverSrc = latest?.coverUrl || s.coverUrl || "";
-            const second = vols[1];
-            const third = vols[2];
-            const toneA = hashTone(s.title + "b");
-            const toneB = hashTone(s.title + "c");
+      ) : isDesktop ? (
+        <div className="shelf-rows">
+          {rows.map((row, ri) => {
+            const rowWidth = row.length * SHELF_CARD_W + (row.length - 1) * SHELF_GAP;
             return (
-              <div className={`series-card-wrap${vc > 1 ? " stacked" : ""}`} key={s.id} onClick={() => onOpenSeries(s.id)} title={s.title}>
-                {vc > 1 && (
-                  <div className="stack-layer stack-2" style={{ background: toneB.bg }}>
-                    {third?.coverUrl && <img src={third.coverUrl} alt="" className="stack-img" />}
-                  </div>
-                )}
-                {vc > 1 && (
-                  <div className="stack-layer stack-1" style={{ background: toneA.bg }}>
-                    {second?.coverUrl && <img src={second.coverUrl} alt="" className="stack-img" />}
-                  </div>
-                )}
-                <div className="series-card">
-                  <div className="cover" style={{ background: tone.bg, color: tone.fg }}>
-                    <Cover src={coverSrc} imgAlt={s.title} imgClassName="cover-img" fallback={<span className="cover-title">{s.title}</span>} />
-                    <span className="type-pill" style={{ background: tp.bg, color: tp.fg }}>{tp.label}</span>
-                    <button className={`card-del${confirmingId === s.id ? " confirming" : ""}`} title="ลบเรื่องนี้" onClick={(e) => trigger(s.id, e)}>
-                      {confirmingId === s.id ? <Check size={12} /> : <X size={12} />}
-                    </button>
-                  </div>
+              <div className="shelf-row" key={ri}>
+                <div className="shelf-row-cards" style={{ width: rowWidth }}>
+                  {row.map((s) => (
+                    <SeriesCard
+                      key={s.id}
+                      series={s}
+                      volumesDesc={volumesDesc}
+                      confirmingId={confirmingId}
+                      trigger={trigger}
+                      onOpenSeries={onOpenSeries}
+                      style={{ width: SHELF_CARD_W, flexShrink: 0 }}
+                    />
+                  ))}
+                </div>
+                <div className="shelf-plank" style={{ width: rowWidth }}>
+                  <div className="shelf-plank-shadow" />
                 </div>
               </div>
             );
           })}
+        </div>
+      ) : (
+        <div className="series-grid">
+          {filtered.map((s) => (
+            <SeriesCard key={s.id} series={s} volumesDesc={volumesDesc} confirmingId={confirmingId} trigger={trigger} onOpenSeries={onOpenSeries} />
+          ))}
         </div>
       )}
     </div>
