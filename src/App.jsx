@@ -739,11 +739,19 @@ html, body { background: var(--bg); margin: 0; }
 
 @media (max-width: 640px) {
   .bs-root { padding: 14px 10px 40px; max-width: none; }
-  .topbar-inner { padding: 14px 14px; max-width: none; }
-  .topbar-title { font-size: 17px; }
-  .topbar-meta { font-size: 12px; }
-  .topbar-back { width: 30px; height: 30px; }
-  .topbar .search-box { max-width: none; }
+  .topbar-inner { padding: 12px 14px; max-width: none; }
+  .topbar-row { flex-wrap: nowrap; }
+  .topbar-title { font-size: 19px; }
+  .topbar-meta { display: none; }
+  .topbar-back { width: 32px; height: 32px; }
+  .topbar-title-line { gap: 10px; min-width: 0; flex: 1; }
+  .topbar-actions { gap: 6px; }
+  .topbar-actions .btn-text { display: none; }
+  .topbar-actions .btn-primary { padding: 8px 9px; }
+  .topbar .search-box { max-width: none; min-width: 0; padding: 8px 12px; }
+  .topbar .search-box input { min-width: 0; }
+  .topbar-title-line.search-active .topbar-title { display: none; }
+  .search-close { background: transparent; border: none; color: var(--ink-soft); display: flex; align-items: center; padding: 0; flex-shrink: 0; }
 
   .home-header h1 { font-size: 24px; }
   .home-header p { font-size: 13px; }
@@ -824,6 +832,8 @@ export default function App() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState({ type: "home" });
+  const isDesktop = useIsDesktop();
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -1018,16 +1028,23 @@ export default function App() {
         const seriesInCollection = data.series.filter((s) => s.collectionId === view.id);
         return (
           <TopBar
-            onBack={() => { setView({ type: "home" }); setSearch(""); }}
+            onBack={() => { setView({ type: "home" }); setSearch(""); setMobileSearchOpen(false); }}
             title={collection.name}
             meta={`${seriesInCollection.length} เรื่อง`}
-            secondary={
+            hideTitleOnMobile={mobileSearchOpen}
+            actions={
               <>
-                <div className="search-box">
-                  <Search size={15} />
-                  <input placeholder="ค้นหาชื่อเรื่อง..." value={search} onChange={(e) => setSearch(e.target.value)} />
-                </div>
-                <button className="btn-primary" onClick={() => { setEditingSeries(null); setShowSeriesModal(true); }}><Plus size={15} /> เพิ่มหนังสือ</button>
+                <SearchControl
+                  value={search}
+                  onChange={setSearch}
+                  isDesktop={isDesktop}
+                  open={mobileSearchOpen}
+                  onOpenSearch={() => setMobileSearchOpen(true)}
+                  onCloseSearch={() => setMobileSearchOpen(false)}
+                />
+                <button className="btn-primary" onClick={() => { setEditingSeries(null); setShowSeriesModal(true); }}>
+                  <Plus size={15} /> <span className="btn-text">เพิ่มหนังสือ</span>
+                </button>
               </>
             }
           />
@@ -1155,12 +1172,36 @@ export default function App() {
 /* Top bar (global, full width, sticky, shown on every page)              */
 /* ---------------------------------------------------------------------- */
 
-function TopBar({ onBack, title, meta, actions, secondary }) {
+function SearchControl({ value, onChange, isDesktop, open, onOpenSearch, onCloseSearch }) {
+  if (isDesktop || open) {
+    return (
+      <div className="search-box">
+        <Search size={15} />
+        <input
+          autoFocus={!isDesktop}
+          placeholder="ค้นหาชื่อเรื่อง..."
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+        {!isDesktop && (
+          <button className="search-close" title="ปิดค้นหา" onClick={() => { onChange(""); onCloseSearch(); }}>
+            <X size={14} />
+          </button>
+        )}
+      </div>
+    );
+  }
+  return (
+    <button className="icon-btn" title="ค้นหา" onClick={onOpenSearch}><Search size={16} /></button>
+  );
+}
+
+function TopBar({ onBack, title, meta, actions, secondary, hideTitleOnMobile }) {
   return (
     <div className="topbar">
       <div className="topbar-inner">
         <div className="topbar-row">
-          <div className="topbar-title-line">
+          <div className={`topbar-title-line${hideTitleOnMobile ? " search-active" : ""}`}>
             {onBack && <button className="topbar-back" title="กลับ" onClick={onBack}><ArrowLeft size={16} /></button>}
             <span className="topbar-title">{title}</span>
             {meta && <span className="topbar-meta">{meta}</span>}
